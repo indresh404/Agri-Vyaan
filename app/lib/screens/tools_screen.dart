@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ToolsScreen extends StatefulWidget {
-  const ToolsScreen({super.key});
+  final String? initialCalculator;
+  const ToolsScreen({super.key, this.initialCalculator});
 
   @override
   State<ToolsScreen> createState() => _ToolsScreenState();
@@ -9,6 +10,12 @@ class ToolsScreen extends StatefulWidget {
 
 class _ToolsScreenState extends State<ToolsScreen> {
   String? _selectedCalculator;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCalculator = widget.initialCalculator;
+  }
 
   @override
   Widget build(BuildContext context) {
