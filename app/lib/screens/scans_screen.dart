@@ -7,6 +7,140 @@ class ScansScreen extends StatefulWidget {
 
   @override
   State<ScansScreen> createState() => _ScansScreenState();
+
+  static void showRequestScanModal(BuildContext context, AppState appState) {
+    if (appState.fields.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please register a field first.')),
+      );
+      return;
+    }
+
+    String? selectedFieldId = appState.fields.first.id;
+    String selectedScanType = 'Crop Health Scan';
+    final dateController = TextEditingController(text: '2026-08-27');
+    final timeController = TextEditingController(text: '10:00 AM');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                top: 24,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Book New Drone Scan',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.purple),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Field Dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedFieldId,
+                    items: appState.fields
+                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        selectedFieldId = val;
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: 'Select Field'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Scan Type Dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedScanType,
+                    items: const [
+                      DropdownMenuItem(value: 'Crop Health Scan', child: Text('Crop Health Scan')),
+                      DropdownMenuItem(value: 'Moisture/Soil Scan', child: Text('Moisture/Soil Scan')),
+                      DropdownMenuItem(value: 'Full Field Analysis', child: Text('Full Field Analysis')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() {
+                        selectedScanType = val!;
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: 'Select Scan Type'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Date & Time entries
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: dateController,
+                          decoration: const InputDecoration(labelText: 'Target Date'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: timeController,
+                          decoration: const InputDecoration(labelText: 'Target Time'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (selectedFieldId != null) {
+                              appState.requestDroneScan(
+                                fieldId: selectedFieldId!,
+                                scanType: selectedScanType,
+                                date: dateController.text,
+                                time: timeController.text,
+                              );
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Scan requested! Switch role to Operator/Admin to complete it.'),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                          child: const Text('Confirm Booking', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class _ScansScreenState extends State<ScansScreen> {
@@ -257,131 +391,6 @@ class _ScansScreenState extends State<ScansScreen> {
   }
 
   void _showRequestScanModal(BuildContext context, AppState appState) {
-    if (appState.fields.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please register a field first.')),
-      );
-      return;
-    }
-
-    _selectedFieldId = appState.fields.first.id;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                top: 24,
-                left: 24,
-                right: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Book New Drone Scan',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.purple),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Field Dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedFieldId,
-                    items: appState.fields
-                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
-                        .toList(),
-                    onChanged: (val) {
-                      setModalState(() {
-                        _selectedFieldId = val;
-                      });
-                    },
-                    decoration: const InputDecoration(labelText: 'Select Field'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Scan Type Dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedScanType,
-                    items: ['Crop Health Scan', 'Moisture/Soil Scan', 'Full Field Analysis']
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                        .toList(),
-                    onChanged: (val) {
-                      setModalState(() {
-                        _selectedScanType = val!;
-                      });
-                    },
-                    decoration: const InputDecoration(labelText: 'Select Scan Type'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Date & Time entries
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _dateController,
-                          decoration: const InputDecoration(labelText: 'Target Date'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: _timeController,
-                          decoration: const InputDecoration(labelText: 'Target Time'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_selectedFieldId != null) {
-                              appState.requestDroneScan(
-                                fieldId: _selectedFieldId!,
-                                scanType: _selectedScanType,
-                                date: _dateController.text,
-                                time: _timeController.text,
-                              );
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Scan requested! Switch role to Operator/Admin to complete it.'),
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-                          child: const Text('Confirm Booking', style: TextStyle(color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+    ScansScreen.showRequestScanModal(context, appState);
   }
 }
