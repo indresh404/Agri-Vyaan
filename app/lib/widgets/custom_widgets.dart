@@ -846,7 +846,7 @@ class SprayingConditionCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             child: Text(
-              '⚠️ Spray timings are weather-based guidelines. Consult product label.',
+              'Notice: Spray timings are weather-based guidelines. Consult product label.',
               style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.grey.shade800),
               textAlign: TextAlign.center,
             ),

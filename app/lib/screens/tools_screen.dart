@@ -368,7 +368,7 @@ class _PesticideCalculatorFormState extends State<PesticideCalculatorForm> {
             ),
             const SizedBox(height: 12),
             const Text(
-              '⚠️ Follow the product label and local agricultural guidance.',
+              'Important: Follow the product label and local agricultural guidance.',
               style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.red),
               textAlign: TextAlign.center,
             ),

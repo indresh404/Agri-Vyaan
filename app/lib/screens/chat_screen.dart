@@ -254,7 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Mock speaking
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🎤 Voice input listening... speak now.')),
+      const SnackBar(content: Text('Voice input listening... speak now.')),
     );
 
     Future.delayed(const Duration(seconds: 2), () {

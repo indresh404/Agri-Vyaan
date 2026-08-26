@@ -8,6 +8,276 @@ class FieldsScreen extends StatefulWidget {
 
   @override
   State<FieldsScreen> createState() => _FieldsScreenState();
+
+  static void showAddFieldDialog(BuildContext context, AppState appState) {
+    final nameController = TextEditingController();
+    final areaController = TextEditingController();
+    String selectedUnit = 'acres';
+    String selectedCrop = 'Cotton';
+    String selectedStage = 'Germination stage';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Register New Field'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Field Name (e.g. Field D)'),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: areaController,
+                            decoration: const InputDecoration(labelText: 'Area Size'),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: DropdownButtonFormField<String>(
+                            value: selectedUnit,
+                            items: const [
+                              DropdownMenuItem(value: 'acres', child: Text('acres')),
+                              DropdownMenuItem(value: 'hectares', child: Text('hectares')),
+                            ],
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedUnit = val!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedCrop,
+                      items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean']
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedCrop = val!;
+                        });
+                      },
+                      decoration: const InputDecoration(labelText: 'Select Crop'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedStage,
+                      items: const [
+                        DropdownMenuItem(value: 'Germination stage', child: Text('Germination stage')),
+                        DropdownMenuItem(value: 'Vegetative stage', child: Text('Vegetative stage')),
+                        DropdownMenuItem(value: 'Flowering stage', child: Text('Flowering stage')),
+                        DropdownMenuItem(value: 'Fruiting stage', child: Text('Fruiting stage')),
+                        DropdownMenuItem(value: 'Harvest stage', child: Text('Harvest stage')),
+                      ],
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedStage = val!;
+                        });
+                      },
+                      decoration: const InputDecoration(labelText: 'Crop Lifecycle Stage'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (nameController.text.isNotEmpty && areaController.text.isNotEmpty) {
+                      final newField = CropField(
+                        id: 'field_${DateTime.now().millisecondsSinceEpoch}',
+                        name: nameController.text,
+                        crop: selectedCrop,
+                        area: double.parse(areaController.text),
+                        areaUnit: selectedUnit,
+                        sowingDate: '2026-08-26',
+                        cropStage: selectedStage,
+                        healthScore: 90,
+                        prevHealthScore: 90,
+                        lastScanDate: 'None',
+                        moistureStatus: 'NORMAL',
+                        activeAlerts: [],
+                        zones: [
+                          Zone(
+                            id: 'z1',
+                            name: 'Zone 1',
+                            status: 'Healthy',
+                            moisture: 50,
+                            temperature: 28,
+                            risk: 'None',
+                            aiExplanation: 'Field conditions are within normal limits.',
+                            recommendation: 'Monitor regularly.',
+                          ),
+                          Zone(
+                            id: 'z2',
+                            name: 'Zone 2',
+                            status: 'Healthy',
+                            moisture: 50,
+                            temperature: 28,
+                            risk: 'None',
+                            aiExplanation: 'Field conditions are within normal limits.',
+                            recommendation: 'Monitor regularly.',
+                          ),
+                        ],
+                        sensors: [],
+                      );
+                      appState.addField(newField);
+                      Navigator.pop(context);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static void showGlobalRecordActionModal(BuildContext context, AppState appState) {
+    if (appState.fields.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please register a field first.')),
+      );
+      return;
+    }
+
+    String selectedFieldId = appState.fields.first.id;
+    CropField selectedField = appState.fields.first;
+    String selectedZoneId = selectedField.zones.isNotEmpty ? selectedField.zones.first.id : 'z1';
+    final notesController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                top: 24,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Record Treatment / Action',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade800),
+                  ),
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    value: selectedFieldId,
+                    items: appState.fields
+                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        selectedFieldId = val!;
+                        selectedField = appState.fields.firstWhere((f) => f.id == selectedFieldId);
+                        selectedZoneId = selectedField.zones.isNotEmpty ? selectedField.zones.first.id : 'z1';
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: 'Select Field'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: selectedZoneId,
+                    items: selectedField.zones
+                        .map((z) => DropdownMenuItem(value: z.id, child: Text(z.name)))
+                        .toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        selectedZoneId = val!;
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: 'Select Zone'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Actions/Notes taken (e.g. Applied Drip Irrigation)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (notesController.text.isNotEmpty) {
+                              final zone = selectedField.zones.firstWhere((z) => z.id == selectedZoneId, orElse: () => selectedField.zones.first);
+                              appState.recordAction(
+                                fieldId: selectedField.id,
+                                title: notesController.text,
+                                category: zone.status.toLowerCase().contains('moisture') ? 'Water' : 'Nutrient',
+                                zoneName: zone.name,
+                                notes: 'Farmer action applied at zone. Simulation pipeline activated.',
+                                beforeState: {
+                                  'Moisture': '${zone.moisture.toStringAsFixed(0)}%',
+                                  'Stress': zone.status.toUpperCase(),
+                                },
+                              );
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Action recorded successfully! Simulation activated.')),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                          child: const Text('Save Action', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class _FieldsScreenState extends State<FieldsScreen> {
@@ -23,18 +293,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(appState.translate('fields')),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-            onPressed: () => _showAddFieldDialog(context, appState),
-          )
-        ],
-      ),
+      appBar: _buildTopNavBar(context),
       body: appState.fields.isEmpty
           ? Center(
               child: Column(
@@ -169,144 +428,72 @@ class _FieldsScreenState extends State<FieldsScreen> {
   }
 
   void _showAddFieldDialog(BuildContext context, AppState appState) {
-    _nameController.text = '';
-    _areaController.text = '';
+    FieldsScreen.showAddFieldDialog(context, appState);
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Register New Field'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Field Name (e.g. Field D)'),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _areaController,
-                        decoration: const InputDecoration(labelText: 'Area Size'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedUnit,
-                        items: ['acres', 'hectares']
-                            .map((u) => DropdownMenuItem(value: u, child: Text(u)))
-                            .toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedUnit = val!;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedCrop,
-                  items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedCrop = val!;
-                    });
-                  },
-                  decoration: const InputDecoration(labelText: 'Select Crop'),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedStage,
-                  items: ['Germination stage', 'Vegetative stage', 'Flowering stage', 'Fruiting stage', 'Harvest stage']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedStage = val!;
-                    });
-                  },
-                  decoration: const InputDecoration(labelText: 'Crop Lifecycle Stage'),
+  PreferredSizeWidget _buildTopNavBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(85),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Container(
+            height: 65,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.psychology, color: Colors.green.shade800, size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'AgriSwarm',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.landscape, color: Colors.green.shade800, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Fields',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_nameController.text.isNotEmpty && _areaController.text.isNotEmpty) {
-                  final newField = CropField(
-                    id: 'field_${DateTime.now().millisecondsSinceEpoch}',
-                    name: _nameController.text,
-                    crop: _selectedCrop,
-                    area: double.parse(_areaController.text),
-                    areaUnit: _selectedUnit,
-                    sowingDate: '2026-08-26',
-                    cropStage: _selectedStage,
-                    healthScore: 90,
-                    prevHealthScore: 90,
-                    lastScanDate: 'None',
-                    moistureStatus: 'NORMAL',
-                    activeAlerts: [],
-                    zones: [
-                      Zone(
-                        id: 'z1',
-                        name: 'Zone 1',
-                        status: 'Healthy',
-                        moisture: 50,
-                        temperature: 28,
-                        risk: 'None',
-                        aiExplanation: 'Field conditions are within normal limits.',
-                        recommendation: 'Monitor regularly.',
-                      ),
-                      Zone(
-                        id: 'z2',
-                        name: 'Zone 2',
-                        status: 'Healthy',
-                        moisture: 50,
-                        temperature: 28,
-                        risk: 'None',
-                        aiExplanation: 'Field conditions are within normal limits.',
-                        recommendation: 'Monitor regularly.',
-                      ),
-                    ],
-                    sensors: [
-                      SensorReading(
-                        sensorName: 'Soil Moisture',
-                        currentValue: 50,
-                        minNormal: 35,
-                        maxNormal: 65,
-                        unit: '%',
-                        status: 'NORMAL',
-                        history: [50],
-                      )
-                    ],
-                  );
-                  appState.addField(newField);
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Add Field', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 }

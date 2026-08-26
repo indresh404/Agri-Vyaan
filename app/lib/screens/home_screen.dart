@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
 import '../widgets/custom_widgets.dart';
+import 'weather_screen.dart';
+import 'tools_screen.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int) onTabSelected;
@@ -30,8 +33,11 @@ class HomeScreen extends StatelessWidget {
     // Today's Weather Summary
     final todayWeather = appState.weatherForecast.first;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: _buildTopNavBar(context),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -263,19 +269,19 @@ class HomeScreen extends StatelessWidget {
                 Icons.wb_sunny_outlined,
                 'Weather & Spray',
                 Colors.orange,
-                () => onTabSelected(4), // More screen triggers
+                () => onPushScreen(const WeatherScreen()),
               ),
               _buildQuickActionBtn(
                 Icons.calculate_outlined,
                 'Farm Tools',
                 Colors.teal,
-                () => onTabSelected(4), // More screen triggers
+                () => onPushScreen(const ToolsScreen()),
               ),
               _buildQuickActionBtn(
                 Icons.chat_bubble_outline_rounded,
                 'Ask AI',
                 Colors.green,
-                () => onTabSelected(4), // More screen triggers
+                () => onPushScreen(const ChatScreen()),
               ),
               _buildQuickActionBtn(
                 Icons.assessment_outlined,
@@ -288,8 +294,9 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 20),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFarmStatColumn(String value, String label) {
     return Column(
@@ -347,6 +354,72 @@ class HomeScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildTopNavBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(85),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Container(
+            height: 65,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.psychology, color: Colors.green.shade800, size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'AgriSwarm',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.home, color: Colors.green.shade800, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Home',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
