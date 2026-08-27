@@ -224,4 +224,66 @@ class FarmField {
 
   factory FarmField.fromJsonString(String jsonString) =>
       FarmField.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+
+  factory FarmField.fromCropField(dynamic c) {
+    try {
+      final zonesList = (c.zones as List?)?.map((z) => FieldZone(
+        name: z.name as String,
+        healthScore: z.status == 'Healthy' ? 85.0 : 60.0,
+        soilMoisture: (z.moisture as num).toDouble(),
+        temperature: (z.temperature as num).toDouble(),
+        humidity: 60.0,
+        problem: z.status != 'Healthy' ? z.status as String? : null,
+        severity: z.risk != 'None' ? z.risk as String? : null,
+        recommendation: (z.recommendation as String).isNotEmpty ? z.recommendation as String : null,
+      )).toList() ?? [];
+
+      final alertsList = (c.activeAlerts as List?)?.map((a) => FieldProblem(
+        title: a as String,
+        severity: 'Medium',
+        description: a as String,
+      )).toList() ?? [];
+
+      return FarmField(
+        id: c.id as String,
+        name: c.name as String,
+        crop: c.crop as String,
+        area: (c.area as num).toDouble(),
+        location: '${c.areaUnit} • ${c.cropStage}',
+        sowingDate: DateTime.tryParse(c.sowingDate as String) ?? DateTime.now(),
+        healthScore: (c.healthScore as num).toDouble(),
+        soilMoisture: zonesList.isNotEmpty ? zonesList.first.soilMoisture : 45.0,
+        temperature: zonesList.isNotEmpty ? zonesList.first.temperature : 28.0,
+        humidity: 60.0,
+        lastScan: DateTime.now(),
+        isDemoData: true,
+        zones: zonesList,
+        problems: alertsList,
+        improvements: const [
+          FieldImprovement(
+            title: 'Crop Care & Management',
+            steps: [
+              'Monitor soil moisture and zone health regularly',
+              'Follow recommended fertilization and irrigation schedules',
+            ],
+          ),
+        ],
+      );
+    } catch (_) {
+      return FarmField(
+        id: c.id as String,
+        name: c.name as String,
+        crop: c.crop as String,
+        area: (c.area as num).toDouble(),
+        location: 'Farm Field',
+        sowingDate: DateTime.now(),
+        healthScore: (c.healthScore as num).toDouble(),
+        soilMoisture: 45.0,
+        temperature: 28.0,
+        humidity: 60.0,
+        lastScan: DateTime.now(),
+        isDemoData: true,
+      );
+    }
+  }
 }
