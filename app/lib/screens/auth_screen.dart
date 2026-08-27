@@ -148,6 +148,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           Expanded(
                             flex: 1,
                             child: DropdownButtonFormField<String>(
+                              isExpanded: true,
                               value: _selectedUnit,
                               items: ['acres', 'hectares']
                                   .map((u) => DropdownMenuItem(value: u, child: Text(u)))
