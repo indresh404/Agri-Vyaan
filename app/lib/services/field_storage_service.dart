@@ -5,7 +5,7 @@ import '../models/farm_field.dart';
 /// Service for persisting field data locally using SharedPreferences.
 /// Designed to be replaced with a real backend service later.
 class FieldStorageService {
-  static const String _storageKey = 'agriswarm_fields';
+  static const String _storageKey = 'agrivyaan_fields';
 
   /// Loads all saved fields from local storage.
   Future<List<FarmField>> loadFields() async {

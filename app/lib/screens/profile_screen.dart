@@ -109,7 +109,11 @@ class ProfileScreen extends StatelessWidget {
             CircleAvatar(
               radius: 32,
               backgroundColor: Colors.green.shade50,
-              child: Icon(Icons.person, color: Colors.green.shade800, size: 36),
+              child: Icon(
+                Icons.person,
+                color: Colors.green.shade800,
+                size: 36,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -135,7 +139,10 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     profile?.phone ?? '9876543210',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -166,16 +173,15 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.feedback_outlined,
-                  color: Colors.blue.shade700,
-                  size: 22,
-                ),
+                Icon(Icons.feedback_outlined, color: Colors.blue.shade700, size: 22),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
                     'How is your experience with AgriSwarm app?',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ],
@@ -185,7 +191,10 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.only(left: 32.0),
               child: Text(
                 "We'd love to hear your thoughts and suggestions.",
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 13,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -235,16 +244,15 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.share_outlined,
-                  color: Colors.green.shade700,
-                  size: 22,
-                ),
+                Icon(Icons.share_outlined, color: Colors.green.shade700, size: 22),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
                     'Grow smart together!',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ],
@@ -254,7 +262,10 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.only(left: 32.0),
               child: Text(
                 'Share AgriSwarm and help farmers solve their plant problems.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 13,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -332,10 +343,8 @@ class ProfileScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => LibraryScreen(
-                  onPushScreen: (screen) => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => screen),
-                  ),
+                  onPushScreen: (screen) =>
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
                 ),
               ),
             ),
@@ -366,15 +375,8 @@ class ProfileScreen extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: iconColor),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-      ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 14,
-        color: Colors.grey.shade400,
-      ),
+      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
       onTap: onTap,
     );
   }
@@ -414,10 +416,7 @@ class ProfileScreen extends StatelessWidget {
               title: 'Preferred Units',
               trailing: Text(
                 profile?.areaUnit.toUpperCase() ?? 'ACRES',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
               ),
             ),
             const Divider(height: 1),
@@ -464,29 +463,15 @@ class ProfileScreen extends StatelessWidget {
         children: [
           ListTile(
             leading: Icon(Icons.help_outline, color: Colors.green.shade700),
-            title: const Text(
-              'Help & Support',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Colors.grey.shade400,
-            ),
+            title: const Text('Help & Support', style: TextStyle(fontWeight: FontWeight.w500)),
+            trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
             onTap: () => _showHelpDialog(context),
           ),
           const Divider(height: 1),
           ListTile(
             leading: Icon(Icons.info_outline, color: Colors.green.shade700),
-            title: const Text(
-              'AgriSwarm v1.0.0',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Colors.grey.shade400,
-            ),
+            title: const Text('AgriSwarm v1.0.0', style: TextStyle(fontWeight: FontWeight.w500)),
+            trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
             onTap: () {},
           ),
         ],
@@ -509,9 +494,7 @@ class ProfileScreen extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.red,
           side: const BorderSide(color: Colors.red),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

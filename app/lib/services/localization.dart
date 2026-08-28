@@ -1,7 +1,7 @@
 class AppLocalizations {
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'app_title': 'AgriSwarm',
+      'app_title': 'Agrivyaan',
       'home': 'Home',
       'fields': 'Fields',
       'scans': 'Scans',
@@ -51,7 +51,7 @@ class AppLocalizations {
       'area_calc': 'Farm Area Calculator',
     },
     'hi': {
-      'app_title': 'एग्रीस्वार्म',
+      'app_title': 'एग्रीव्यान',
       'home': 'मुख्य पृष्ठ',
       'fields': 'खेत',
       'scans': 'स्कैन',
@@ -101,7 +101,7 @@ class AppLocalizations {
       'area_calc': 'क्षेत्रफल कैलकुलेटर',
     },
     'mr': {
-      'app_title': 'अॅग्रीस्वार्म',
+      'app_title': 'अॅग्रीव्यान',
       'home': 'मुख्यपृष्ठ',
       'fields': 'शेती',
       'scans': 'स्कॅन',

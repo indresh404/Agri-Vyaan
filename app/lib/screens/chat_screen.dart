@@ -29,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // Welcome message
     _messages.add({
       'isUser': false,
-      'text': 'Hello! I am your AgriSwarm AI Farm Intelligence Companion. I see you are farming Cotton and Tomato in Wardha.\n\nAsk me about health decreases, spraying windows, or how to resolve moisture alerts.',
+      'text': 'Hello! I am your Agrivyaan AI Farm Intelligence Companion. I see you are farming Cotton and Tomato in Wardha.\n\nAsk me about health decreases, spraying windows, or how to resolve moisture alerts.',
     });
 
     if (widget.prefilledPrompt != null) {
@@ -163,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: _inputController,
                     decoration: const InputDecoration(
-                      hintText: 'Ask AgriSwarm Assistant...',
+                      hintText: 'Ask Agrivyaan Assistant...',
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 12),
                     ),
@@ -244,7 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return 'Zone 2 of Field A has soil moisture at 27% (LOW). Irrigation check are recommended. (ज़ोन २ में नमी कम है, कृपया सिंचाई की जांच करें।)';
     }
 
-    return 'I am your AgriSwarm AI Assistant. I monitor your fields (Cotton, Tomato, Wheat) and weather. Ask me: "Why is field health decreasing?" or "Is spraying suitable today?"';
+    return 'I am your Agrivyaan AI Assistant. I monitor your fields (Cotton, Tomato, Wheat) and weather. Ask me: "Why is field health decreasing?" or "Is spraying suitable today?"';
   }
 
   void _triggerVoiceSimulation(AppState appState) {

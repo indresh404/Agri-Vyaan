@@ -159,6 +159,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Profile Management ---
+  void updateProfile(FarmerProfile profile) {
+    _currentProfile = profile;
+    notifyListeners();
+  }
+
   // --- Field Management ---
   void addField(CropField field) {
     _fields.add(field);
@@ -407,7 +413,7 @@ class AppState extends ChangeNotifier {
     _currentProfile = FarmerProfile(
       name: 'Demo Farmer',
       phone: '9876543210',
-      email: 'farmer@agriswarm.com',
+      email: 'farmer@agrivyaan.com',
       preferredLanguage: 'en',
       location: 'Wardha, Maharashtra',
       farmArea: 9.7,
@@ -912,6 +918,11 @@ class AppState extends ChangeNotifier {
         isCritical: isCritical,
       ),
     );
+    notifyListeners();
+  }
+
+  void updateWeatherForecast(List<WeatherForecast> forecast) {
+    _weatherForecast = forecast;
     notifyListeners();
   }
 
