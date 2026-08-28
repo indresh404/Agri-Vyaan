@@ -129,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Join AgriSwarm Community',
+                    'Join AGRI-VYAAN Community',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontSize: 13,
@@ -177,7 +177,7 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'How is your experience with AgriSwarm app?',
+                    'How is your experience with AGRI-VYAAN app?',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -261,7 +261,7 @@ class ProfileScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 32.0),
               child: Text(
-                'Share AgriSwarm and help farmers solve their plant problems.',
+                'Share AGRI-VYAAN and help farmers solve their plant problems.',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 13,
@@ -285,7 +285,7 @@ class ProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                   child: Text(
-                    'Share AgriSwarm',
+                    'Share AGRI-VYAAN',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontWeight: FontWeight.w600,
@@ -470,7 +470,7 @@ class ProfileScreen extends StatelessWidget {
           const Divider(height: 1),
           ListTile(
             leading: Icon(Icons.info_outline, color: Colors.green.shade700),
-            title: const Text('AgriSwarm v1.0.0', style: TextStyle(fontWeight: FontWeight.w500)),
+            title: const Text('AGRI-VYAAN v1.0.0', style: TextStyle(fontWeight: FontWeight.w500)),
             trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
             onTap: () {},
           ),
@@ -544,9 +544,9 @@ class ProfileScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Share AgriSwarm'),
+        title: const Text('Share AGRI-VYAAN'),
         content: const Text(
-          'Share AgriSwarm with your fellow farmers and help them grow better crops!',
+          'Share AGRI-VYAAN with your fellow farmers and help them grow better crops!',
         ),
         actions: [
           TextButton(
@@ -571,9 +571,9 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('AgriSwarm Support'),
+          title: const Text('AGRI-VYAAN Support'),
           content: const Text(
-            'For assistance, contact support at support@agriswarm.com or call 1800-123-4567.\n\nOur agronomy experts are available 24/7.',
+            'For assistance, contact support at support@agrivyaan.com or call 1800-123-4567.\n\nOur agronomy experts are available 24/7.',
           ),
           actions: [
             TextButton(

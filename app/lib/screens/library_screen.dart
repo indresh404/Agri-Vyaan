@@ -5,8 +5,13 @@ import 'chat_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   final Function(Widget) onPushScreen;
+  final int initialTab;
 
-  const LibraryScreen({super.key, required this.onPushScreen});
+  const LibraryScreen({
+    super.key,
+    required this.onPushScreen,
+    this.initialTab = 0,
+  });
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -20,7 +25,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();

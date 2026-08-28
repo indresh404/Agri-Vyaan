@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/weather_service.dart';
+import '../utils/app_theme.dart';
 import '../widgets/custom_widgets.dart';
 import 'weather_screen.dart';
 import 'tools_screen.dart';
 import 'chat_screen.dart';
+import 'library_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onTabSelected;
@@ -471,7 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 20),
 
-            // --- AGRISWARM LIBRARY SECTION ---
+            // --- CROP LIBRARY CARD BUTTON ---
             const Text(
               'Crops Library',
               style: TextStyle(
@@ -480,28 +482,62 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Tap any crop to view growing conditions, soil parameters & cultivation tips.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 12),
-
-            // Crops Box Grid (Rice, Wheat, Cotton, Tomato, Maize, Sugarcane)
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 1.3,
-              children: _mockCrops
-                  .map((crop) => _buildCropBoxCard(context, crop))
-                  .toList(),
+            const SizedBox(height: 10),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.green.shade100),
+              ),
+              color: Colors.green.shade50.withOpacity(0.4),
+              child: InkWell(
+                onTap: () {
+                  widget.onPushScreen(
+                    LibraryScreen(
+                      onPushScreen: widget.onPushScreen,
+                      initialTab: 0,
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.agriculture, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Crops Library & History',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.primaryGreen),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Growing conditions, sowing periods & growth stages for major crops.',
+                              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.primaryGreen),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 
-            // PESTS & DISEASES LIBRARY SECTION
+            // --- PESTS & DISEASES LIBRARY CARD BUTTON ---
             const Text(
               'Pests & Diseases Library',
               style: TextStyle(
@@ -510,24 +546,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Tap on a pest/disease to see diagnostics, prevention, and control methods.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 12),
-
-            // Pests Grid Layout
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 1.8,
-              children: _mockPests
-                  .map((pest) => _buildPestBoxCard(context, pest))
-                  .toList(),
+            const SizedBox(height: 10),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.orange.shade100),
+              ),
+              color: Colors.orange.shade50.withOpacity(0.4),
+              child: InkWell(
+                onTap: () {
+                  widget.onPushScreen(
+                    LibraryScreen(
+                      onPushScreen: widget.onPushScreen,
+                      initialTab: 1,
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade800,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.pest_control, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Pests & Diseases Hub',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Identify crop threats, diagnostic symptoms, prevention & treatments.',
+                              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.orange),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -795,7 +865,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'AgriSwarm',
+                        'AGRI-VYAAN',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,

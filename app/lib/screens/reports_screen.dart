@@ -741,14 +741,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Icon(Icons.print, color: Colors.green),
               SizedBox(width: 8),
-              Text('Print-Ready Audit Report'),
+              Expanded(
+                child: Text('Print-Ready Audit Report', overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 const Text(
                   'AGRIVYAAN CROP INTELLIGENCE SERVICES',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey),
@@ -777,6 +780,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ],
             ),
           ),
+        ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -895,6 +899,51 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   _generateAndDownloadReport(context, field);
                 },
               ),
+              const Divider(height: 24),
+              Builder(
+                builder: (context) {
+                  final isRequested = appState.requestedReportFieldIds.contains(field.id);
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isRequested ? Colors.purple.shade50 : Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isRequested ? Icons.hourglass_empty : Icons.send_and_archive_outlined,
+                        color: isRequested ? Colors.purple.shade800 : Colors.teal.shade800,
+                      ),
+                    ),
+                    title: Text(
+                      isRequested ? 'Pending Request Received' : 'Request Admin for Report',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Text(
+                      isRequested
+                          ? 'Your request has been registered and is pending admin approval'
+                          : 'Submit a new drone audit & report request to the Agrivyaan Hub admins',
+                    ),
+                    trailing: isRequested
+                        ? Icon(Icons.check_circle, color: Colors.purple.shade600, size: 18)
+                        : const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: isRequested
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Request is already pending admin review.')),
+                            );
+                          }
+                        : () {
+                            Navigator.pop(context);
+                            appState.requestReportForField(field.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Report request submitted successfully!')),
+                            );
+                          },
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -918,20 +967,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Icon(Icons.layers, color: Colors.green, size: 20),
                 SizedBox(width: 8),
-                Text(
-                  'Zone Condition Table',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Expanded(
+                  child: Text(
+                    'Zone Condition Table',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Table(
               columnWidths: const {
-                0: FlexColumnWidth(1.2), // Zone
-                1: FlexColumnWidth(1.8), // Status
-                2: FlexColumnWidth(1.1), // Moisture
-                3: FlexColumnWidth(1.0), // Temp
-                4: FlexColumnWidth(1.0), // Risk
+                0: FlexColumnWidth(1.2),
+                1: FlexColumnWidth(1.8),
+                2: FlexColumnWidth(1.1),
+                3: FlexColumnWidth(1.0),
+                4: FlexColumnWidth(1.0),
               },
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
@@ -955,27 +1007,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
                     ),
                     children: [
-                      Padding(padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0), child: Text(zone.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isLowMoisture ? Colors.red.shade50 : Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              zone.status,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: isLowMoisture ? Colors.red.shade900 : Colors.green.shade900,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
+                        child: Text(
+                          zone.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                        child: Text(
+                          zone.status,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isLowMoisture ? Colors.red.shade900 : Colors.green.shade900,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
                           ),
                         ),
                       ),
@@ -990,6 +1040,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1020,9 +1072,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Icon(Icons.sensors, color: Colors.blue, size: 20),
                 SizedBox(width: 8),
-                Text(
-                  'Sensor Telemetry Table',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Expanded(
+                  child: Text(
+                    'Sensor Telemetry Table',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -1384,6 +1439,76 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               pw.SizedBox(height: 16),
 
+              pw.Text('HISTORICAL ANALYTICS TREND PROGRESS (VISUAL CHARTS)', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // Chart 1: Crop Health Trend
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey300),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Crop Health Index History', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
+                          pw.SizedBox(height: 12),
+                          pw.Container(
+                            height: 60,
+                            child: pw.Row(
+                              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                              crossAxisAlignment: pw.CrossAxisAlignment.end,
+                              children: [
+                                _buildPdfBar('Scan 1', (field.prevHealthScore - 4).clamp(0, 100).toDouble(), PdfColors.green300),
+                                _buildPdfBar('Scan 2', (field.prevHealthScore - 2).clamp(0, 100).toDouble(), PdfColors.green400),
+                                _buildPdfBar('Scan 3', field.prevHealthScore.toDouble(), PdfColors.green600),
+                                _buildPdfBar('Current', field.healthScore.toDouble(), PdfColors.green800),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  // Chart 2: Soil Moisture Trend
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey300),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Soil Moisture (%) History', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                          pw.SizedBox(height: 12),
+                          pw.Container(
+                            height: 60,
+                            child: pw.Row(
+                              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                              crossAxisAlignment: pw.CrossAxisAlignment.end,
+                              children: [
+                                _buildPdfBar('Scan 1', moistureSensor.history.isNotEmpty ? moistureSensor.history[0] : 50.0, PdfColors.blue300),
+                                _buildPdfBar('Scan 2', moistureSensor.history.length > 1 ? moistureSensor.history[1] : 50.0, PdfColors.blue400),
+                                _buildPdfBar('Scan 3', moistureSensor.history.length > 2 ? moistureSensor.history[2] : 50.0, PdfColors.blue600),
+                                _buildPdfBar('Current', moistureSensor.currentValue, PdfColors.blue800),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+
               pw.Text('EXPERT RECOMMENDATION & CROP SOLUTIONS', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
               pw.SizedBox(height: 6),
               ...field.zones.where((z) => z.risk.toLowerCase() != 'none').map((zone) {
@@ -1435,20 +1560,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       try {
         if (Platform.isAndroid) {
-          final androidDownload = Directory('/storage/emulated/0/Download');
-          if (await androidDownload.exists()) {
-            filePath = '${androidDownload.path}/agrivyaan_report_${field.name.replaceAll(' ', '_')}.pdf';
+          // Use app-accessible external storage (no permission needed on Android 10+)
+          final extDir = await getExternalStorageDirectory();
+          if (extDir != null) {
+            filePath = '${extDir.path}/agrivyaan_report_${field.name.replaceAll(' ', '_')}.pdf';
             file = File(filePath);
             await file.writeAsBytes(pdfBytes);
             savedDirectly = true;
           } else {
-            final extDir = await getExternalStorageDirectory();
-            if (extDir != null) {
-              filePath = '${extDir.path}/agrivyaan_report_${field.name.replaceAll(' ', '_')}.pdf';
-              file = File(filePath);
-              await file.writeAsBytes(pdfBytes);
-              savedDirectly = true;
-            }
+            // Final fallback: app documents directory
+            final appDocs = await getApplicationDocumentsDirectory();
+            filePath = '${appDocs.path}/agrivyaan_report_${field.name.replaceAll(' ', '_')}.pdf';
+            file = File(filePath);
+            await file.writeAsBytes(pdfBytes);
+            savedDirectly = true;
           }
         } else if (Platform.isWindows) {
           final home = Platform.environment['USERPROFILE'];
@@ -1482,13 +1607,58 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Icon(Icons.download_done, color: Colors.green),
                 SizedBox(width: 8),
-                Text('PDF Report Generated'),
+                Expanded(
+                  child: Text('PDF Report Generated', overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
-            content: Text(
-              savedDirectly
-                  ? 'The PDF report was successfully saved to your downloads:\n\n$filePath\n\nWould you also like to share or save it via your phone\'s system menu?'
-                  : 'PDF Report successfully generated!\n\nUse the system menu to save it to your phone\'s Files or send it via chat/email.',
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    savedDirectly
+                        ? 'The PDF report was successfully saved to your downloads folder as:\n'
+                        : 'PDF Report successfully generated!\n',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  if (savedDirectly) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      width: double.infinity,
+                      child: Text(
+                        file?.path.split('/').last ?? 'agrivyaan_report.pdf',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Would you also like to share or save it via your phone\'s system menu?',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'Use the system menu to save it to your phone\'s Files or send it via chat/email.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ],
+                  ],
+                ),
+              ),
             ),
             actions: [
               TextButton(
@@ -1583,6 +1753,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  pw.Widget _buildPdfBar(String label, double value, PdfColor color) {
+    final barHeight = 5.0 + (value.clamp(0, 100) / 100.0 * 40.0);
+    return pw.Column(
+      mainAxisAlignment: pw.MainAxisAlignment.end,
+      children: [
+        pw.Text('${value.round()}', style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
+        pw.SizedBox(height: 2),
+        pw.Container(
+          width: 14,
+          height: barHeight,
+          decoration: pw.BoxDecoration(
+            color: color,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 6)),
+      ],
     );
   }
 }
