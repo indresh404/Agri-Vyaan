@@ -234,6 +234,90 @@ class CropField {
     required this.activeAlerts,
   });
 
+  factory CropField.fromFarmField(dynamic f) {
+    try {
+      final zonesList = (f.zones as List?)?.map((z) {
+        final riskString = z.severity ?? 'None';
+        return Zone(
+          id: 'z_${z.name.replaceAll(' ', '_')}',
+          name: z.name as String,
+          status: z.problem ?? 'Healthy',
+          moisture: (z.soilMoisture as num).toDouble(),
+          temperature: (z.temperature as num).toDouble(),
+          risk: riskString.isNotEmpty ? riskString : 'None',
+          aiExplanation: z.problem != null ? 'Issue detected: ${z.problem}' : 'Field conditions are within normal limits.',
+          recommendation: z.recommendation ?? 'Monitor regularly.',
+        );
+      }).toList() ?? [];
+
+      final alertsList = (f.problems as List?)?.map((p) => p.title as String).toList() ?? [];
+
+      final moistureSensor = SensorReading(
+        sensorName: 'Soil Moisture',
+        currentValue: f.soilMoisture,
+        minNormal: 35.0,
+        maxNormal: 65.0,
+        unit: '%',
+        status: f.soilMoisture < 35 ? 'LOW' : 'NORMAL',
+        history: [f.soilMoisture + 10, f.soilMoisture + 5, f.soilMoisture],
+      );
+
+      final tempSensor = SensorReading(
+        sensorName: 'Temperature',
+        currentValue: f.temperature,
+        minNormal: 20.0,
+        maxNormal: 35.0,
+        unit: '°C',
+        status: f.temperature > 35 ? 'HIGH' : 'NORMAL',
+        history: [f.temperature - 2, f.temperature - 1, f.temperature],
+      );
+
+      final humiditySensor = SensorReading(
+        sensorName: 'Humidity',
+        currentValue: f.humidity,
+        minNormal: 50.0,
+        maxNormal: 80.0,
+        unit: '%',
+        status: 'NORMAL',
+        history: [f.humidity - 5, f.humidity - 2, f.humidity],
+      );
+
+      return CropField(
+        id: f.id as String,
+        name: f.name as String,
+        crop: f.crop as String,
+        area: (f.area as num).toDouble(),
+        areaUnit: 'acres',
+        sowingDate: f.sowingDate.toString().split(' ').first,
+        cropStage: 'Vegetative stage',
+        healthScore: f.healthScore.toInt(),
+        prevHealthScore: f.healthScore.toInt(),
+        lastScanDate: f.lastScan.toString().split(' ').first,
+        moistureStatus: f.soilMoisture < 35 ? 'LOW' : 'NORMAL',
+        zones: zonesList,
+        sensors: [moistureSensor, tempSensor, humiditySensor],
+        activeAlerts: alertsList,
+      );
+    } catch (_) {
+      return CropField(
+        id: f.id as String,
+        name: f.name as String,
+        crop: f.crop as String,
+        area: (f.area as num).toDouble(),
+        areaUnit: 'acres',
+        sowingDate: '2026-08-26',
+        cropStage: 'Vegetative stage',
+        healthScore: f.healthScore.toInt(),
+        prevHealthScore: f.healthScore.toInt(),
+        lastScanDate: 'None',
+        moistureStatus: 'NORMAL',
+        zones: [],
+        sensors: [],
+        activeAlerts: [],
+      );
+    }
+  }
+
   CropField copyWith({
     String? name,
     String? crop,
