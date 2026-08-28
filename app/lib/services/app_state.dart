@@ -49,6 +49,9 @@ class AppState extends ChangeNotifier {
   List<NotificationItem> _notifications = [];
   List<NotificationItem> get notifications => _notifications;
 
+  final List<String> _requestedReportFieldIds = [];
+  List<String> get requestedReportFieldIds => _requestedReportFieldIds;
+
   AppState() {
     _initializeData();
   }
@@ -931,9 +934,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateWeatherForecast(List<WeatherForecast> forecast) {
-    _weatherForecast = forecast;
-    notifyListeners();
+  void requestReportForField(String fieldId) {
+    if (!_requestedReportFieldIds.contains(fieldId)) {
+      _requestedReportFieldIds.add(fieldId);
+      _addNotification(
+        title: 'Report Request Received',
+        description: 'Your request for a detailed crop audit report has been submitted to the admin panel.',
+        isCritical: false,
+      );
+      notifyListeners();
+    }
   }
 }
 

@@ -42,306 +42,290 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        backgroundColor: AppTheme.scaffoldBackground,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.textPrimary,
+          elevation: 0.5,
+          title: Text(
+            _field.name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: _handleMenuAction,
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('Edit Field'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 20, color: AppTheme.error),
+                      SizedBox(width: 8),
+                      Text('Delete Field', style: TextStyle(color: AppTheme.error)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+          bottom: const TabBar(
+            labelColor: AppTheme.primaryGreen,
+            unselectedLabelColor: Colors.black54,
+            indicatorColor: AppTheme.primaryGreen,
+            isScrollable: false,
+            labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: TextStyle(fontSize: 11),
+            tabs: [
+              Tab(text: 'Overview', icon: Icon(Icons.dashboard_outlined, size: 18)),
+              Tab(text: 'Scans', icon: Icon(Icons.photo_library_outlined, size: 18)),
+              Tab(text: 'Trends', icon: Icon(Icons.trending_up_rounded, size: 18)),
+              Tab(text: 'Advice', icon: Icon(Icons.psychology_outlined, size: 18)),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildOverviewTab(),
+            _buildDroneImagesTab(),
+            _buildTrendGraphsTab(),
+            _buildAdviceTab(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab() {
     final moistureStatus = getMoistureStatus(_field.soilMoisture);
     final tempStatus = getTemperatureStatus(_field.temperature);
     final humidityStatus = getHumidityStatus(_field.humidity);
 
-    return Scaffold(
-      backgroundColor: AppTheme.scaffoldBackground,
-      body: CustomScrollView(
-        slivers: [
-          // App bar with field name
-          SliverAppBar(
-            expandedHeight: 120,
-            pinned: true,
-            backgroundColor: Colors.white,
-            foregroundColor: AppTheme.textPrimary,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding:
-                  const EdgeInsets.only(left: 56, bottom: 16, right: 56),
-              title: Text(
-                _field.name,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryGreenSurface,
-                      Colors.white,
-                    ],
-                  ),
-                ),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Field info summary
+        _buildFieldInfo(),
+        const SizedBox(height: 20),
+
+        // Health score
+        _buildSectionTitle('Crop Health Status', Icons.favorite_rounded),
+        const SizedBox(height: 12),
+        Center(child: HealthIndicator(score: _field.healthScore)),
+        const SizedBox(height: 24),
+
+        // Sensor readings
+        _buildSectionTitle('Field Conditions', Icons.sensors_rounded),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SensorCard(
+                icon: Icons.water_drop_rounded,
+                title: 'Soil Moisture',
+                value: '${_field.soilMoisture.round()}',
+                unit: '%',
+                statusLabel: moistureStatusLabel(moistureStatus),
+                statusColor: moistureStatusColor(moistureStatus),
+                isDemoData: _field.isDemoData,
               ),
             ),
-            actions: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: _handleMenuAction,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 20),
-                        SizedBox(width: 8),
-                        Text('Edit Field'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline, size: 20, color: AppTheme.error),
-                        SizedBox(width: 8),
-                        Text('Delete Field',
-                            style: TextStyle(color: AppTheme.error)),
-                      ],
-                    ),
-                  ),
-                ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: SensorCard(
+                icon: Icons.thermostat_rounded,
+                title: 'Temperature',
+                value: '${_field.temperature.round()}',
+                unit: '°C',
+                statusLabel: temperatureStatusLabel(tempStatus),
+                statusColor: temperatureStatusColor(tempStatus),
+                isDemoData: _field.isDemoData,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SensorCard(
+                icon: Icons.water_outlined,
+                title: 'Humidity',
+                value: '${_field.humidity.round()}',
+                unit: '%',
+                statusLabel: humidityStatusLabel(humidityStatus),
+                statusColor: humidityStatusColor(humidityStatus),
+                isDemoData: _field.isDemoData,
+              ),
+            ),
+          ],
+        ),
 
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // Field info summary
-                _buildFieldInfo(),
-                const SizedBox(height: 20),
-
-                // Health score
-                _buildSectionTitle('Crop Health', Icons.favorite_rounded),
-                const SizedBox(height: 12),
-                Center(child: HealthIndicator(score: _field.healthScore)),
-                const SizedBox(height: 24),
-
-                // Sensor readings
-                _buildSectionTitle(
-                    'Field Conditions', Icons.sensors_rounded),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SensorCard(
-                        icon: Icons.water_drop_rounded,
-                        title: 'Soil Moisture',
-                        value: '${_field.soilMoisture.round()}',
-                        unit: '%',
-                        statusLabel:
-                            moistureStatusLabel(moistureStatus),
-                        statusColor:
-                            moistureStatusColor(moistureStatus),
-                        isDemoData: _field.isDemoData,
-                      ),
-                    ),
-                  ],
+        // Sensor connection status
+        if (_field.isDemoData) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: AppTheme.warning),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Showing demo sensor values. Connect sensors or drones for live data.',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SensorCard(
-                        icon: Icons.thermostat_rounded,
-                        title: 'Temperature',
-                        value: '${_field.temperature.round()}',
-                        unit: '°C',
-                        statusLabel:
-                            temperatureStatusLabel(tempStatus),
-                        statusColor:
-                            temperatureStatusColor(tempStatus),
-                        isDemoData: _field.isDemoData,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SensorCard(
-                        icon: Icons.water_outlined,
-                        title: 'Humidity',
-                        value: '${_field.humidity.round()}',
-                        unit: '%',
-                        statusLabel:
-                            humidityStatusLabel(humidityStatus),
-                        statusColor:
-                            humidityStatusColor(humidityStatus),
-                        isDemoData: _field.isDemoData,
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Sensor connection status
-                if (_field.isDemoData) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.warning.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppTheme.warning.withValues(alpha: 0.2)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            size: 16, color: AppTheme.warning),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Showing demo sensor values. Connect sensors or drones for live data.',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-
-                // Field Zones
-                if (_field.zones.isNotEmpty) ...[
-                  _buildSectionTitle('Field Zones', Icons.grid_view_rounded),
-                  const SizedBox(height: 12),
-                  FieldZoneMap(
-                    zones: _field.zones,
-                    onZoneTap: _openZoneDetails,
-                  ),
-                  const SizedBox(height: 12),
-                  ..._field.zones.map(
-                    (zone) => ZoneCard(
-                      zone: zone,
-                      onTap: () => _openZoneDetails(zone),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Active Problems
-                if (_field.problems.isNotEmpty) ...[
-                  _buildSectionTitle(
-                      'Active Problems (${_field.problems.length})',
-                      Icons.warning_amber_rounded),
-                  const SizedBox(height: 12),
-                  ..._field.problems.map(
-                    (p) => ProblemCard(problem: p),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Improvements
-                if (_field.improvements.isNotEmpty) ...[
-                  _buildSectionTitle(
-                      'Improvements Needed', Icons.lightbulb_outline),
-                  const SizedBox(height: 12),
-                  ..._field.improvements.map(
-                    (i) => ImprovementCard(improvement: i),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.info.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.smart_toy_outlined,
-                            size: 14, color: AppTheme.info),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Recommendations are AI-assisted and should be verified when required.',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                                fontStyle: FontStyle.italic),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // If no problems
-                if (_field.problems.isEmpty) ...[
-                  _buildSectionTitle('Active Problems', Icons.warning_amber_rounded),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreenSurface,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.check_circle_rounded,
-                            color: AppTheme.primaryGreen, size: 28),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'No Problems Detected',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primaryGreen,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Your field is in good condition.',
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // Drone images section
-                const SizedBox(height: 24),
-                _buildSectionTitle('Drone Scan Images', Icons.photo_library_outlined),
-                const SizedBox(height: 12),
-                _buildImagesSection(),
-
-                // Analytics trend charts section
-                const SizedBox(height: 24),
-                _buildSectionTitle('Field Analytics Trend Progress', Icons.trending_up_rounded),
-                const SizedBox(height: 12),
-                _buildTrendChartsSection(),
-
-                // Expert recommendations and advice section
-                const SizedBox(height: 24),
-                _buildSectionTitle('Detailed Advice & Solutions', Icons.psychology_outlined),
-                const SizedBox(height: 12),
-                _buildAdviceSection(),
-
-                const SizedBox(height: 32),
-              ]),
+              ],
             ),
           ),
         ],
-      ),
+        const SizedBox(height: 24),
+
+        // Field Zones
+        if (_field.zones.isNotEmpty) ...[
+          _buildSectionTitle('Field Zones Layout', Icons.grid_view_rounded),
+          const SizedBox(height: 12),
+          FieldZoneMap(
+            zones: _field.zones,
+            onZoneTap: _openZoneDetails,
+          ),
+          const SizedBox(height: 12),
+          ..._field.zones.map(
+            (zone) => ZoneCard(
+              zone: zone,
+              onTap: () => _openZoneDetails(zone),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // Active Problems / If no problems
+        if (_field.problems.isNotEmpty) ...[
+          _buildSectionTitle(
+              'Active Problems (${_field.problems.length})',
+              Icons.warning_amber_rounded),
+          const SizedBox(height: 12),
+          ..._field.problems.map((p) => ProblemCard(problem: p)),
+          const SizedBox(height: 24),
+        ] else ...[
+          _buildSectionTitle('Active Problems', Icons.warning_amber_rounded),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreenSurface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: AppTheme.primaryGreen, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No Problems Detected',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Your field is in good condition.',
+                        style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // Improvements
+        if (_field.improvements.isNotEmpty) ...[
+          _buildSectionTitle('Improvements Needed', Icons.lightbulb_outline),
+          const SizedBox(height: 12),
+          ..._field.improvements.map((i) => ImprovementCard(improvement: i)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.info.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.smart_toy_outlined, size: 14, color: AppTheme.info),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Recommendations are AI-assisted and should be verified when required.',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDroneImagesTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionTitle('Drone Aerial Imagery Scans', Icons.photo_library_outlined),
+        const SizedBox(height: 12),
+        _buildImagesSection(),
+      ],
+    );
+  }
+
+  Widget _buildTrendGraphsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionTitle('Field Analytics Trend Progress', Icons.trending_up_rounded),
+        const SizedBox(height: 12),
+        _buildTrendChartsSection(),
+      ],
+    );
+  }
+
+  Widget _buildAdviceTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionTitle('Detailed Advice & Solutions', Icons.psychology_outlined),
+        const SizedBox(height: 12),
+        _buildAdviceSection(),
+      ],
     );
   }
 
@@ -379,11 +363,12 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: AppTheme.textLight),
           const SizedBox(width: 10),
           SizedBox(
-            width: 90,
+            width: 80,
             child: Text(
               label,
               style: const TextStyle(
@@ -396,10 +381,12 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textPrimary,
               ),
+              overflow: TextOverflow.visible,
+              softWrap: true,
             ),
           ),
         ],
@@ -416,12 +403,15 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
       children: [
         Icon(icon, size: 20, color: AppTheme.primaryGreen),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

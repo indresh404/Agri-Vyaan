@@ -134,12 +134,13 @@ class _AddFieldScreenState extends State<AddFieldScreen> {
               // Crop
               _buildLabel('Crop'),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _cropOptions.contains(_selectedCrop)
                     ? _selectedCrop
                     : 'Other',
                 decoration: const InputDecoration(
-                  prefixIcon:
-                      Icon(Icons.agriculture, color: AppTheme.textLight),
+                  prefixIcon: Icon(Icons.grass_outlined, color: AppTheme.textLight),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 ),
                 items: _cropOptions
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
