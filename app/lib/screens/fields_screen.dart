@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
+import '../models/farm_field.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
+import '../services/field_storage_service.dart';
+import '../services/demo_data.dart';
+import '../utils/app_theme.dart';
 import '../widgets/custom_widgets.dart';
+import '../widgets/field_card.dart';
+import 'add_field_screen.dart';
+import 'field_overview_screen.dart';
 
+/// Displays all farm fields with search, add, navigation, and integration with AppState.
 class FieldsScreen extends StatefulWidget {
-  const FieldsScreen({super.key});
+  final List<FarmField>? fields;
+  final FieldStorageService? storageService;
+
+  const FieldsScreen({
+    super.key,
+    this.fields,
+    this.storageService,
+  });
 
   @override
   State<FieldsScreen> createState() => _FieldsScreenState();
@@ -29,7 +44,8 @@ class FieldsScreen extends StatefulWidget {
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Field Name (e.g. Field D)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Field Name (e.g. Field D)'),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -38,7 +54,8 @@ class FieldsScreen extends StatefulWidget {
                           flex: 2,
                           child: TextField(
                             controller: areaController,
-                            decoration: const InputDecoration(labelText: 'Area Size'),
+                            decoration:
+                                const InputDecoration(labelText: 'Area Size'),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -46,10 +63,12 @@ class FieldsScreen extends StatefulWidget {
                         Expanded(
                           flex: 1,
                           child: DropdownButtonFormField<String>(
-                            value: selectedUnit,
+                            initialValue: selectedUnit,
                             items: const [
-                              DropdownMenuItem(value: 'acres', child: Text('acres')),
-                              DropdownMenuItem(value: 'hectares', child: Text('hectares')),
+                              DropdownMenuItem(
+                                  value: 'acres', child: Text('acres')),
+                              DropdownMenuItem(
+                                  value: 'hectares', child: Text('hectares')),
                             ],
                             onChanged: (val) {
                               setDialogState(() {
@@ -62,33 +81,46 @@ class FieldsScreen extends StatefulWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: selectedCrop,
-                      items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean']
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      initialValue: selectedCrop,
+                      items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean', 'Maize', 'Potato']
+                          .map((c) =>
+                              DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
                       onChanged: (val) {
                         setDialogState(() {
                           selectedCrop = val!;
                         });
                       },
-                      decoration: const InputDecoration(labelText: 'Select Crop'),
+                      decoration:
+                          const InputDecoration(labelText: 'Select Crop'),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: selectedStage,
+                      initialValue: selectedStage,
                       items: const [
-                        DropdownMenuItem(value: 'Germination stage', child: Text('Germination stage')),
-                        DropdownMenuItem(value: 'Vegetative stage', child: Text('Vegetative stage')),
-                        DropdownMenuItem(value: 'Flowering stage', child: Text('Flowering stage')),
-                        DropdownMenuItem(value: 'Fruiting stage', child: Text('Fruiting stage')),
-                        DropdownMenuItem(value: 'Harvest stage', child: Text('Harvest stage')),
+                        DropdownMenuItem(
+                            value: 'Germination stage',
+                            child: Text('Germination stage')),
+                        DropdownMenuItem(
+                            value: 'Vegetative stage',
+                            child: Text('Vegetative stage')),
+                        DropdownMenuItem(
+                            value: 'Flowering stage',
+                            child: Text('Flowering stage')),
+                        DropdownMenuItem(
+                            value: 'Fruiting stage',
+                            child: Text('Fruiting stage')),
+                        DropdownMenuItem(
+                            value: 'Harvest stage',
+                            child: Text('Harvest stage')),
                       ],
                       onChanged: (val) {
                         setDialogState(() {
                           selectedStage = val!;
                         });
                       },
-                      decoration: const InputDecoration(labelText: 'Crop Lifecycle Stage'),
+                      decoration: const InputDecoration(
+                          labelText: 'Crop Lifecycle Stage'),
                     ),
                   ],
                 ),
@@ -100,12 +132,13 @@ class FieldsScreen extends StatefulWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (nameController.text.isNotEmpty && areaController.text.isNotEmpty) {
+                    if (nameController.text.isNotEmpty &&
+                        areaController.text.isNotEmpty) {
                       final newField = CropField(
                         id: 'field_${DateTime.now().millisecondsSinceEpoch}',
                         name: nameController.text,
                         crop: selectedCrop,
-                        area: double.parse(areaController.text),
+                        area: double.tryParse(areaController.text) ?? 1.0,
                         areaUnit: selectedUnit,
                         sowingDate: '2026-08-26',
                         cropStage: selectedStage,
@@ -122,7 +155,8 @@ class FieldsScreen extends StatefulWidget {
                             moisture: 50,
                             temperature: 28,
                             risk: 'None',
-                            aiExplanation: 'Field conditions are within normal limits.',
+                            aiExplanation:
+                                'Field conditions are within normal limits.',
                             recommendation: 'Monitor regularly.',
                           ),
                           Zone(
@@ -132,7 +166,8 @@ class FieldsScreen extends StatefulWidget {
                             moisture: 50,
                             temperature: 28,
                             risk: 'None',
-                            aiExplanation: 'Field conditions are within normal limits.',
+                            aiExplanation:
+                                'Field conditions are within normal limits.',
                             recommendation: 'Monitor regularly.',
                           ),
                         ],
@@ -142,8 +177,10 @@ class FieldsScreen extends StatefulWidget {
                       Navigator.pop(context);
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen),
+                  child: const Text('Confirm',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -153,7 +190,8 @@ class FieldsScreen extends StatefulWidget {
     );
   }
 
-  static void showGlobalRecordActionModal(BuildContext context, AppState appState) {
+  static void showGlobalRecordActionModal(
+      BuildContext context, AppState appState) {
     if (appState.fields.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please register a field first.')),
@@ -163,7 +201,9 @@ class FieldsScreen extends StatefulWidget {
 
     String selectedFieldId = appState.fields.first.id;
     CropField selectedField = appState.fields.first;
-    String selectedZoneId = selectedField.zones.isNotEmpty ? selectedField.zones.first.id : 'z1';
+    String selectedZoneId = selectedField.zones.isNotEmpty
+        ? selectedField.zones.first.id
+        : 'z1';
     final notesController = TextEditingController();
 
     showModalBottomSheet(
@@ -188,50 +228,57 @@ class FieldsScreen extends StatefulWidget {
                 children: [
                   Text(
                     'Record Treatment / Action',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade800),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.green.shade800),
                   ),
                   const SizedBox(height: 16),
-
                   DropdownButtonFormField<String>(
-                    value: selectedFieldId,
+                    initialValue: selectedFieldId,
                     items: appState.fields
-                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .map((f) =>
+                            DropdownMenuItem(value: f.id, child: Text(f.name)))
                         .toList(),
                     onChanged: (val) {
                       setModalState(() {
                         selectedFieldId = val!;
-                        selectedField = appState.fields.firstWhere((f) => f.id == selectedFieldId);
-                        selectedZoneId = selectedField.zones.isNotEmpty ? selectedField.zones.first.id : 'z1';
+                        selectedField = appState.fields
+                            .firstWhere((f) => f.id == selectedFieldId);
+                        selectedZoneId = selectedField.zones.isNotEmpty
+                            ? selectedField.zones.first.id
+                            : 'z1';
                       });
                     },
-                    decoration: const InputDecoration(labelText: 'Select Field'),
+                    decoration:
+                        const InputDecoration(labelText: 'Select Field'),
                   ),
                   const SizedBox(height: 12),
-
                   DropdownButtonFormField<String>(
-                    value: selectedZoneId,
+                    initialValue: selectedZoneId,
                     items: selectedField.zones
-                        .map((z) => DropdownMenuItem(value: z.id, child: Text(z.name)))
+                        .map((z) =>
+                            DropdownMenuItem(value: z.id, child: Text(z.name)))
                         .toList(),
                     onChanged: (val) {
                       setModalState(() {
                         selectedZoneId = val!;
                       });
                     },
-                    decoration: const InputDecoration(labelText: 'Select Zone'),
+                    decoration:
+                        const InputDecoration(labelText: 'Select Zone'),
                   ),
                   const SizedBox(height: 16),
-
                   TextField(
                     controller: notesController,
                     decoration: const InputDecoration(
-                      labelText: 'Actions/Notes taken (e.g. Applied Drip Irrigation)',
+                      labelText:
+                          'Actions/Notes taken (e.g. Applied Drip Irrigation)',
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,
                   ),
                   const SizedBox(height: 24),
-
                   Row(
                     children: [
                       Expanded(
@@ -245,26 +292,38 @@ class FieldsScreen extends StatefulWidget {
                         child: ElevatedButton(
                           onPressed: () {
                             if (notesController.text.isNotEmpty) {
-                              final zone = selectedField.zones.firstWhere((z) => z.id == selectedZoneId, orElse: () => selectedField.zones.first);
+                              final zone = selectedField.zones.firstWhere(
+                                  (z) => z.id == selectedZoneId,
+                                  orElse: () => selectedField.zones.first);
                               appState.recordAction(
                                 fieldId: selectedField.id,
                                 title: notesController.text,
-                                category: zone.status.toLowerCase().contains('moisture') ? 'Water' : 'Nutrient',
+                                category: zone.status
+                                        .toLowerCase()
+                                        .contains('moisture')
+                                    ? 'Water'
+                                    : 'Nutrient',
                                 zoneName: zone.name,
-                                notes: 'Farmer action applied at zone. Simulation pipeline activated.',
+                                notes:
+                                    'Farmer action applied at zone. Simulation pipeline activated.',
                                 beforeState: {
-                                  'Moisture': '${zone.moisture.toStringAsFixed(0)}%',
+                                  'Moisture':
+                                      '${zone.moisture.toStringAsFixed(0)}%',
                                   'Stress': zone.status.toUpperCase(),
                                 },
                               );
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Action recorded successfully! Simulation activated.')),
+                                const SnackBar(
+                                    content: Text(
+                                        'Action recorded successfully! Simulation activated.')),
                               );
                             }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                          child: const Text('Save Action', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGreen),
+                          child: const Text('Save Action',
+                              style: TextStyle(color: Colors.white)),
                         ),
                       ),
                     ],
@@ -281,224 +340,267 @@ class FieldsScreen extends StatefulWidget {
 }
 
 class _FieldsScreenState extends State<FieldsScreen> {
-  final _nameController = TextEditingController();
-  final _areaController = TextEditingController();
-  String _selectedCrop = 'Cotton';
-  String _selectedStage = 'Vegetative stage';
-  String _selectedUnit = 'acres';
+  final FieldStorageService _storageService = FieldStorageService();
+  List<FarmField> _fields = [];
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFields();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFields() async {
+    setState(() => _isLoading = true);
+
+    // If explicit fields were passed in constructor
+    if (widget.fields != null && widget.fields!.isNotEmpty) {
+      setState(() {
+        _fields = List.from(widget.fields!);
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Check SharedPreferences local fields
+    List<FarmField> loaded =
+        await (widget.storageService ?? _storageService).loadFields();
+
+    if (loaded.isEmpty) {
+      loaded = DemoData.demoFields;
+      await (widget.storageService ?? _storageService).saveFields(loaded);
+    }
+
+    setState(() {
+      _fields = loaded;
+      _isLoading = false;
+    });
+  }
+
+  List<FarmField> _getCombinedFields(AppState? appState) {
+    if (appState == null || appState.fields.isEmpty) {
+      return _fields;
+    }
+
+    // Combine AppState fields (converted) with local storage fields avoiding duplicates by ID
+    final combinedMap = <String, FarmField>{};
+
+    for (final farmField in _fields) {
+      combinedMap[farmField.id] = farmField;
+    }
+
+    for (final cropField in appState.fields) {
+      if (!combinedMap.containsKey(cropField.id)) {
+        combinedMap[cropField.id] = FarmField.fromCropField(cropField);
+      }
+    }
+
+    return combinedMap.values.toList();
+  }
+
+  List<FarmField> _filterFields(List<FarmField> allFields) {
+    if (_searchQuery.isEmpty) return allFields;
+    final q = _searchQuery.toLowerCase();
+    return allFields.where((f) {
+      return f.name.toLowerCase().contains(q) ||
+          f.crop.toLowerCase().contains(q) ||
+          f.location.toLowerCase().contains(q);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
+    final allFields = _getCombinedFields(appState);
+    final filtered = _filterFields(allFields);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: _buildTopNavBar(context),
-      body: appState.fields.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.landscape, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No fields registered yet.',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => _showAddFieldDialog(context, appState),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700),
-                    child: const Text('Add your first field', style: TextStyle(color: Colors.white)),
-                  )
-                ],
+      backgroundColor: AppTheme.scaffoldBackground,
+      appBar: AppBar(
+        title: const Text('My Fields'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ElevatedButton.icon(
+              onPressed: () => _addField(appState),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Add Field'),
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: appState.fields.length,
-              itemBuilder: (context, idx) {
-                final field = appState.fields[idx];
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FieldDetailScreen(fieldId: field.id),
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                field.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Health: ${field.healthScore}',
-                                  style: TextStyle(
-                                    color: Colors.green.shade800,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _buildChip(Icons.grass, field.crop),
-                              const SizedBox(width: 8),
-                              _buildChip(Icons.straighten, '${field.area} ${field.areaUnit}'),
-                              const SizedBox(width: 8),
-                              _buildChip(Icons.timelapse, field.cropStage),
-                            ],
-                          ),
-                          const Divider(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Moisture: ${field.moistureStatus}',
-                                    style: TextStyle(
-                                      color: field.moistureStatus == 'LOW' ? Colors.red : Colors.green.shade700,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Last scan: ${field.lastScanDate}',
-                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                              Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
             ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _searchQuery = v),
+                decoration: InputDecoration(
+                  hintText: 'Search fields by name, crop, or location...',
+                  prefixIcon:
+                      const Icon(Icons.search, color: AppTheme.textLight),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            // Fields list
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: AppTheme.primaryGreen))
+                  : filtered.isEmpty
+                      ? _buildEmptyState(appState)
+                      : RefreshIndicator(
+                          color: AppTheme.primaryGreen,
+                          onRefresh: _loadFields,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.only(top: 4, bottom: 24),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final field = filtered[index];
+                              return FieldCard(
+                                field: field,
+                                onTap: () => _openField(field),
+                              );
+                            },
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
+  Widget _buildEmptyState(AppState? appState) {
+    if (_searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off_rounded,
+                size: 64, color: AppTheme.textLight),
+            const SizedBox(height: 12),
+            Text(
+              'No fields match "$_searchQuery"',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: Colors.grey.shade600),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: Colors.grey.shade800, fontSize: 11)),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreenSurface,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.landscape_outlined,
+                size: 44, color: AppTheme.primaryGreen),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No Fields Registered Yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Add your first field to start monitoring crop health, soil moisture, and zone data.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () => _addField(appState),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Your First Field'),
+          ),
         ],
       ),
     );
   }
 
-  void _showAddFieldDialog(BuildContext context, AppState appState) {
-    FieldsScreen.showAddFieldDialog(context, appState);
-  }
+  void _addField(AppState? appState) async {
+    if (appState != null) {
+      FieldsScreen.showAddFieldDialog(context, appState);
+      return;
+    }
 
-  PreferredSizeWidget _buildTopNavBar(BuildContext context) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(85),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Container(
-            height: 65,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(color: Colors.grey.shade100),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.psychology, color: Colors.green.shade800, size: 28),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'AgriSwarm',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.landscape, color: Colors.green.shade800, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Fields',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.green.shade800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    final result = await Navigator.push<FarmField>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddFieldScreen(
+          fields: _fields,
+          storageService: widget.storageService ?? _storageService,
         ),
       ),
     );
+    if (result != null) {
+      await _loadFields();
+    }
+  }
+
+  void _openField(FarmField field) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FieldOverviewScreen(
+          field: field,
+          fields: _fields,
+          storageService: widget.storageService ?? _storageService,
+        ),
+      ),
+    );
+    await _loadFields();
   }
 }
 
-// --- FIELD DETAIL SCREEN ---
+// --- FIELD DETAIL SCREEN (From Upstream) ---
 class FieldDetailScreen extends StatefulWidget {
   final String fieldId;
 
@@ -508,7 +610,8 @@ class FieldDetailScreen extends StatefulWidget {
   State<FieldDetailScreen> createState() => _FieldDetailScreenState();
 }
 
-class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTickerProviderStateMixin {
+class _FieldDetailScreenState extends State<FieldDetailScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   Zone? _selectedZone;
   final _actionNotesController = TextEditingController();
@@ -520,9 +623,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    _actionNotesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
-    
+
     // Check if field exists
     final fieldExists = appState.fields.any((f) => f.id == widget.fieldId);
     if (!fieldExists) {
@@ -533,8 +643,10 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
     }
 
     final field = appState.fields.firstWhere((f) => f.id == widget.fieldId);
-    final fieldActions = appState.actions.where((a) => a.fieldId == field.id).toList();
-    final fieldScans = appState.scans.where((s) => s.fieldId == field.id).toList();
+    final fieldActions =
+        appState.actions.where((a) => a.fieldId == field.id).toList();
+    final fieldScans =
+        appState.scans.where((s) => s.fieldId == field.id).toList();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -545,9 +657,9 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.green.shade800,
+          labelColor: AppTheme.primaryGreen,
           unselectedLabelColor: Colors.grey.shade600,
-          indicatorColor: Colors.green.shade700,
+          indicatorColor: AppTheme.primaryGreen,
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'IoT Sensors'),
@@ -572,13 +684,21 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
     );
   }
 
-  Widget _buildOverviewTab(BuildContext context, AppState appState, CropField field, List<ActionEntry> actions) {
-    // Check if there is an active irrigation action with before/after state to show outcome comparison
+  Widget _buildOverviewTab(BuildContext context, AppState appState,
+      CropField field, List<ActionEntry> actions) {
     final feedbackAction = actions.firstWhere(
       (a) => a.title.contains('Irrigation') || a.beforeState != null,
-      orElse: () => actions.isNotEmpty ? actions.first : ActionEntry(
-        id: '', fieldId: '', title: '', category: '', zoneName: '', date: '', notes: '', isCompleted: false
-      ),
+      orElse: () => actions.isNotEmpty
+          ? actions.first
+          : ActionEntry(
+              id: '',
+              fieldId: '',
+              title: '',
+              category: '',
+              zoneName: '',
+              date: '',
+              notes: '',
+              isCompleted: false),
     );
 
     return SingleChildScrollView(
@@ -597,7 +717,10 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  HealthScoreCircle(score: field.healthScore, prevScore: field.prevHealthScore, size: 100),
+                  HealthScoreCircle(
+                      score: field.healthScore,
+                      prevScore: field.prevHealthScore,
+                      size: 100),
                   const SizedBox(width: 24),
                   Expanded(
                     child: Column(
@@ -605,20 +728,30 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                       children: [
                         Text(
                           field.crop.toUpperCase(),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 13),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryGreen,
+                              fontSize: 13),
                         ),
                         Text(
                           'Stage: ${field.cropStage}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Sown on: ${field.sowingDate}',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.grey.shade600, fontSize: 12),
                         ),
                         Text(
                           'Moisture status: ${field.moistureStatus}',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: field.moistureStatus == 'LOW' ? Colors.red : Colors.green.shade700),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: field.moistureStatus == 'LOW'
+                                  ? Colors.red
+                                  : AppTheme.primaryGreen),
                         ),
                       ],
                     ),
@@ -631,7 +764,7 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
 
           // Interactive zone map
           const Text(
-            'Interactive Zone Map (USP)',
+            'Interactive Zone Map',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 4),
@@ -667,18 +800,24 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                     children: [
                       Text(
                         _selectedZone!.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 17),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _selectedZone!.status == 'Healthy' ? Colors.green.shade50 : Colors.red.shade50,
+                          color: _selectedZone!.status == 'Healthy'
+                              ? Colors.green.shade50
+                              : Colors.red.shade50,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           _selectedZone!.status.toUpperCase(),
                           style: TextStyle(
-                            color: _selectedZone!.status == 'Healthy' ? Colors.green.shade800 : Colors.red.shade800,
+                            color: _selectedZone!.status == 'Healthy'
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),
@@ -689,33 +828,45 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                   const SizedBox(height: 8),
                   Text(
                     'Moisture: ${_selectedZone!.moisture.toStringAsFixed(0)}%  |  Temperature: ${_selectedZone!.temperature.toStringAsFixed(0)}°C',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                   const Divider(height: 20),
                   Text(
                     'AI Finding: ${_selectedZone!.aiExplanation}',
-                    style: TextStyle(color: Colors.grey.shade800, height: 1.3, fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.grey.shade800,
+                        height: 1.3,
+                        fontSize: 13),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Recommendation: ${_selectedZone!.recommendation}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppTheme.primaryGreen),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => _showWhyModal(context, _selectedZone!),
+                          onPressed: () =>
+                              _showWhyModal(context, _selectedZone!),
                           child: const Text('WHY?'),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => _showRecordActionModal(context, appState, field, _selectedZone!),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700),
-                          child: const Text('RECORD ACTION', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          onPressed: () => _showRecordActionModal(
+                              context, appState, field, _selectedZone!),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGreen),
+                          child: const Text('RECORD ACTION',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 12)),
                         ),
                       )
                     ],
@@ -770,18 +921,24 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                   children: [
                     Text(
                       sensor.sensorName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: sensor.status == 'NORMAL' ? Colors.green.shade50 : Colors.red.shade50,
+                        color: sensor.status == 'NORMAL'
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         sensor.status,
                         style: TextStyle(
-                          color: sensor.status == 'NORMAL' ? Colors.green.shade800 : Colors.red.shade800,
+                          color: sensor.status == 'NORMAL'
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
@@ -792,7 +949,8 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                 const SizedBox(height: 12),
                 Text(
                   '${sensor.currentValue}${sensor.unit}',
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 32, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   'Normal range: ${sensor.minNormal} - ${sensor.maxNormal}${sensor.unit}',
@@ -801,9 +959,12 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                 const SizedBox(height: 16),
                 CustomTrendChart(
                   values: sensor.history,
-                  labels: List.generate(sensor.history.length, (i) => 'T-${sensor.history.length - 1 - i}'),
+                  labels: List.generate(sensor.history.length,
+                      (i) => 'T-${sensor.history.length - 1 - i}'),
                   title: '${sensor.sensorName} Trend Chart',
-                  lineColor: sensor.status == 'NORMAL' ? Colors.green : Colors.red,
+                  lineColor: sensor.status == 'NORMAL'
+                      ? AppTheme.primaryGreen
+                      : Colors.red,
                 ),
               ],
             ),
@@ -813,7 +974,8 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
     );
   }
 
-  Widget _buildActionsTab(BuildContext context, AppState appState, CropField field, List<ActionEntry> actions) {
+  Widget _buildActionsTab(BuildContext context, AppState appState,
+      CropField field, List<ActionEntry> actions) {
     return Column(
       children: [
         Padding(
@@ -821,14 +983,18 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Logged Actions History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('Logged Actions History',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ElevatedButton.icon(
                 icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                label: const Text('Log Action', style: TextStyle(color: Colors.white, fontSize: 12)),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700),
+                label: const Text('Log Action',
+                    style: TextStyle(color: Colors.white, fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen),
                 onPressed: () {
                   if (field.zones.isNotEmpty) {
-                    _showRecordActionModal(context, appState, field, field.zones.first);
+                    _showRecordActionModal(
+                        context, appState, field, field.zones.first);
                   }
                 },
               ),
@@ -853,16 +1019,23 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.green.shade50,
-                          child: Icon(Icons.check, color: Colors.green.shade800),
+                          child:
+                              Icon(Icons.check, color: Colors.green.shade800),
                         ),
-                        title: Text(act.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(act.title,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Zone: ${act.zoneName}  |  Date: ${act.date}', style: const TextStyle(fontSize: 11)),
+                            Text('Zone: ${act.zoneName}  |  Date: ${act.date}',
+                                style: const TextStyle(fontSize: 11)),
                             if (act.notes.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(act.notes, style: TextStyle(fontSize: 12, color: Colors.grey.shade800)),
+                              Text(act.notes,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade800)),
                             ],
                           ],
                         ),
@@ -878,7 +1051,8 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
 
   Widget _buildScansTab(BuildContext context, List<DroneScan> scans) {
     return scans.isEmpty
-        ? const Center(child: Text('No drone scans logged yet for this field.'))
+        ? const Center(
+            child: Text('No drone scans logged yet for this field.'))
         : ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: scans.length,
@@ -901,7 +1075,8 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                           color: Colors.purple.shade50,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.flight_takeoff, color: Colors.purple.shade700),
+                        child: Icon(Icons.flight_takeoff,
+                            color: Colors.purple.shade700),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -910,11 +1085,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                           children: [
                             Text(
                               scan.scanType,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                             const SizedBox(height: 2),
-                            Text('Pilot: ${scan.operatorName}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                            Text('Date: ${scan.date} @ ${scan.time}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                            Text('Pilot: ${scan.operatorName}',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade600)),
+                            Text('Date: ${scan.date} @ ${scan.time}',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey.shade500)),
                           ],
                         ),
                       ),
@@ -922,18 +1102,24 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               scan.verificationStatus,
-                              style: TextStyle(color: Colors.green.shade800, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text('Health: ${scan.healthScore}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          Text('Health: ${scan.healthScore}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 12)),
                         ],
                       )
                     ],
@@ -959,12 +1145,16 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
             children: [
               Text(
                 'AI Explanation - WHY?',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade800),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.green.shade800),
               ),
               const SizedBox(height: 16),
               Text(
                 'Finding: ${zone.status}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 8),
               Text(
@@ -977,14 +1167,17 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 6),
-              const Text('• Drone Multispectral NIR reflection drops\n• Local moisture IoT sensor readings\n• Historical zone trend correlation'),
+              const Text(
+                  '• Drone Multispectral NIR reflection drops\n• Local moisture IoT sensor readings\n• Historical zone trend correlation'),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: const Text('Close', style: TextStyle(color: Colors.white)),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+                  child:
+                      const Text('Close', style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],
@@ -994,7 +1187,8 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
     );
   }
 
-  void _showRecordActionModal(BuildContext context, AppState appState, CropField field, Zone zone) {
+  void _showRecordActionModal(BuildContext context, AppState appState,
+      CropField field, Zone zone) {
     _actionNotesController.text = '';
 
     showModalBottomSheet(
@@ -1017,17 +1211,26 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
             children: [
               Text(
                 'Record Treatment / Action',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade800),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.green.shade800),
               ),
               const SizedBox(height: 8),
-              Text('Field: ${field.name}  |  Zone: ${zone.name}', style: const TextStyle(color: Colors.black54)),
+              Text('Field: ${field.name}  |  Zone: ${zone.name}',
+                  style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 16),
-              Text('Recommended action: ${zone.recommendation}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
+              Text('Recommended action: ${zone.recommendation}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppTheme.primaryGreen)),
               const SizedBox(height: 16),
               TextField(
                 controller: _actionNotesController,
                 decoration: const InputDecoration(
-                  labelText: 'Actions/Notes taken (e.g. Applied Drip Irrigation)',
+                  labelText:
+                      'Actions/Notes taken (e.g. Applied Drip Irrigation)',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
@@ -1049,22 +1252,32 @@ class _FieldDetailScreenState extends State<FieldDetailScreen> with SingleTicker
                           appState.recordAction(
                             fieldId: field.id,
                             title: _actionNotesController.text,
-                            category: zone.status.toLowerCase().contains('moisture') ? 'Water' : 'Nutrient',
+                            category: zone.status
+                                    .toLowerCase()
+                                    .contains('moisture')
+                                ? 'Water'
+                                : 'Nutrient',
                             zoneName: zone.name,
-                            notes: 'Farmer action applied at zone. Simulation pipeline activated.',
+                            notes:
+                                'Farmer action applied at zone. Simulation pipeline activated.',
                             beforeState: {
-                              'Moisture': '${zone.moisture.toStringAsFixed(0)}%',
+                              'Moisture':
+                                  '${zone.moisture.toStringAsFixed(0)}%',
                               'Stress': zone.status.toUpperCase(),
                             },
                           );
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Action recorded successfully! Simulation activated.')),
+                            const SnackBar(
+                                content: Text(
+                                    'Action recorded successfully! Simulation activated.')),
                           );
                         }
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                      child: const Text('Save Action', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen),
+                      child: const Text('Save Action',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],

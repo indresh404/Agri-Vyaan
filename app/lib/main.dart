@@ -13,13 +13,16 @@ import 'screens/admin_screen.dart';
 import 'screens/operator_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/weather_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'utils/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AgriSwarmApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AgriSwarmApp extends StatelessWidget {
+  const AgriSwarmApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,25 +31,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'AgriSwarm',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.green,
-            primary: Colors.green.shade700,
-            secondary: Colors.teal.shade700,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.grey.shade200),
-            ),
-          ),
-        ),
+        theme: AppTheme.theme,
         home: const AppShell(),
       ),
     );
@@ -62,12 +47,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentTabIndex = 0;
-  bool _showDemoConsole = true;
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
-    final theme = Theme.of(context);
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 768;
 
@@ -93,7 +76,10 @@ class _AppShellState extends State<AppShell> {
               });
             },
             onPushScreen: (screen) {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => screen),
+              );
             },
           );
           break;
@@ -119,7 +105,7 @@ class _AppShellState extends State<AppShell> {
           children: [
             // Responsive Sidebar Navigation for Desktop
             if (isDesktop && appState.currentRole == 'FARMER')
-               NavigationRail(
+              NavigationRail(
                 selectedIndex: _currentTabIndex,
                 onDestinationSelected: (idx) {
                   if (idx == 2) {
@@ -135,12 +121,17 @@ class _AppShellState extends State<AppShell> {
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      Icon(Icons.psychology_outlined, color: Colors.green.shade800, size: 28),
+                      Icon(Icons.psychology_outlined,
+                          color: AppTheme.primaryGreen, size: 28),
                       if (width > 1000) ...[
                         const SizedBox(width: 10),
-                        Text(
+                        const Text(
                           'AgriSwarm',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade900),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppTheme.primaryGreen,
+                          ),
                         ),
                       ]
                     ],
@@ -158,8 +149,10 @@ class _AppShellState extends State<AppShell> {
                     label: Text('Fields'),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.add_circle_outline, color: Colors.green),
-                    selectedIcon: Icon(Icons.add_circle, color: Colors.green),
+                    icon: Icon(Icons.add_circle_outline,
+                        color: AppTheme.primaryGreen),
+                    selectedIcon:
+                        Icon(Icons.add_circle, color: AppTheme.primaryGreen),
                     label: Text('Quick Add'),
                   ),
                   NavigationRailDestination(
@@ -174,7 +167,7 @@ class _AppShellState extends State<AppShell> {
                   ),
                 ],
               ),
-            
+
             // Primary content area
             Expanded(
               child: activeContent,
@@ -203,11 +196,27 @@ class _AppShellState extends State<AppShell> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildBottomNavItem(context, appState, 0, Icons.home_outlined, Icons.home, 'Home'),
-                      _buildBottomNavItem(context, appState, 1, Icons.landscape_outlined, Icons.landscape, 'Fields'),
-                      _buildBottomNavItem(context, appState, 2, Icons.add_circle_outline, Icons.add_circle, '+', color: Colors.green),
-                      _buildBottomNavItem(context, appState, 3, Icons.assessment_outlined, Icons.assessment, 'Reports'),
-                      _buildBottomNavItem(context, appState, 4, Icons.person_outline, Icons.person, 'Profile'),
+                      _buildBottomNavItem(context, appState, 0,
+                          Icons.home_outlined, Icons.home, 'Home'),
+                      _buildBottomNavItem(context, appState, 1,
+                          Icons.landscape_outlined, Icons.landscape, 'Fields'),
+                      _buildBottomNavItem(
+                          context,
+                          appState,
+                          2,
+                          Icons.add_circle_outline,
+                          Icons.add_circle,
+                          '+',
+                          color: AppTheme.primaryGreen),
+                      _buildBottomNavItem(
+                          context,
+                          appState,
+                          3,
+                          Icons.assessment_outlined,
+                          Icons.assessment,
+                          'Reports'),
+                      _buildBottomNavItem(context, appState, 4,
+                          Icons.person_outline, Icons.person, 'Profile'),
                     ],
                   ),
                 ),
@@ -217,7 +226,14 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  Widget _buildBottomNavItem(BuildContext context, AppState appState, int index, IconData icon, IconData activeIcon, String label, {Color? color}) {
+  Widget _buildBottomNavItem(
+      BuildContext context,
+      AppState appState,
+      int index,
+      IconData icon,
+      IconData activeIcon,
+      String label,
+      {Color? color}) {
     final isSelected = _currentTabIndex == index;
     return Expanded(
       child: InkWell(
@@ -236,7 +252,9 @@ class _AppShellState extends State<AppShell> {
           children: [
             Icon(
               isSelected ? activeIcon : icon,
-              color: isSelected ? (color ?? Colors.green.shade800) : Colors.grey.shade600,
+              color: isSelected
+                  ? (color ?? AppTheme.primaryGreen)
+                  : Colors.grey.shade600,
               size: index == 2 ? 28 : 22,
             ),
             if (index != 2)
@@ -245,7 +263,9 @@ class _AppShellState extends State<AppShell> {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.green.shade800 : Colors.grey.shade600,
+                  color: isSelected
+                      ? AppTheme.primaryGreen
+                      : Colors.grey.shade600,
                 ),
               ),
           ],
@@ -253,10 +273,6 @@ class _AppShellState extends State<AppShell> {
       ),
     );
   }
-
-
-
-
 
   void _showActionSelectionModal(BuildContext context, AppState appState) {
     showModalBottomSheet(
@@ -273,7 +289,9 @@ class _AppShellState extends State<AppShell> {
               Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -284,10 +302,14 @@ class _AppShellState extends State<AppShell> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.landscape, color: Colors.green.shade700),
+                  decoration: BoxDecoration(
+                      color: AppTheme.primaryGreenSurface,
+                      shape: BoxShape.circle),
+                  child: const Icon(Icons.landscape,
+                      color: AppTheme.primaryGreen),
                 ),
-                title: const Text('Register New Field', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text('Register New Field',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: const Text('Add a new field, crop, and location details'),
                 onTap: () {
                   Navigator.pop(context);
@@ -298,11 +320,15 @@ class _AppShellState extends State<AppShell> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.purple.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.flight_takeoff, color: Colors.purple.shade700),
+                  decoration: BoxDecoration(
+                      color: Colors.purple.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.flight_takeoff,
+                      color: Colors.purple.shade700),
                 ),
-                title: const Text('Book Drone Scan', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('Schedule crop health or soil moisture drone scan'),
+                title: const Text('Book Drone Scan',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle:
+                    const Text('Schedule crop health or soil moisture drone scan'),
                 onTap: () {
                   Navigator.pop(context);
                   ScansScreen.showRequestScanModal(context, appState);
@@ -312,11 +338,14 @@ class _AppShellState extends State<AppShell> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: Colors.blue.shade50, shape: BoxShape.circle),
                   child: Icon(Icons.healing, color: Colors.blue.shade700),
                 ),
-                title: const Text('Record Farm Action', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('Log irrigation, fertilizer, or crop inspections'),
+                title: const Text('Record Farm Action',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text(
+                    'Log irrigation, fertilizer, or crop inspections'),
                 onTap: () {
                   Navigator.pop(context);
                   FieldsScreen.showGlobalRecordActionModal(context, appState);
