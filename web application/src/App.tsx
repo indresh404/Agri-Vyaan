@@ -284,6 +284,7 @@ export function App() {
           {activeTab === 'reports' && (
             <ReportsView
               reports={reports}
+              onNavigate={setActiveTab}
             />
           )}
 

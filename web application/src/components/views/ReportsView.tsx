@@ -1,267 +1,301 @@
 import React, { useState } from 'react';
-import type { AssessmentReport } from '../../types';
-import { Download, Send } from 'lucide-react';
-import { reportlabPdfService } from '../../lib/reportlabPdfService';
+import type { AssessmentReport, FieldAsset } from '../../types';
 import { MOCK_FIELDS, MOCK_FINDINGS } from '../../data/mockData';
+import { reportlabPdfService } from '../../lib/reportlabPdfService';
+import { Download } from 'lucide-react';
 
 interface ReportsViewProps {
   reports: AssessmentReport[];
+  onNavigate?: (tab: any) => void;
 }
 
-export const ReportsView: React.FC<ReportsViewProps> = ({
-  reports
-}) => {
-  const [selectedReportId, setSelectedReportId] = useState<string | null>('REP-904');
-  const [sentStatusMessage, setSentStatusMessage] = useState<string | null>(null);
-
+export const ReportsView: React.FC<ReportsViewProps> = ({ reports }) => {
+  const [selectedReportId, setSelectedReportId] = useState<string>(reports[0]?.id || 'REP-904');
   const selectedReport = reports.find(r => r.id === selectedReportId) || reports[0];
 
+  const targetField: FieldAsset = MOCK_FIELDS.find(f => f.name === selectedReport?.fieldName || f.id === selectedReport?.fieldName) || MOCK_FIELDS[0];
+
   return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Title */}
+    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Page Title */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#20231F', margin: 0 }}>
-            Field Intelligence Reports
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1C201A', margin: 0 }}>
+            AgriSwarm Crop Intelligence Audits
           </h1>
-          <p style={{ fontSize: '13px', color: '#6B7068', marginTop: '2px' }}>
-            Validated multi-spectral field diagnostic assessments generated for farmers.
+          <p style={{ fontSize: '13px', color: '#5F645D', marginTop: '2px' }}>
+            Validated agronomic field reports with sensor telemetry, zone risk analysis, and expert advice.
           </p>
         </div>
+        <button
+          className="op-btn op-btn-primary"
+          onClick={async () => {
+            if (selectedReport) {
+              const findings = MOCK_FINDINGS.filter(f => f.operationId === selectedReport.operationId || f.fieldId === targetField.id);
+              await reportlabPdfService.exportReportLabPdf(selectedReport, targetField, findings);
+            }
+          }}
+        >
+          <Download size={14} /> Export PDF Report
+        </button>
       </div>
 
-      {/* Reports Table & Preview Split */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 520px', gap: '20px' }}>
-        {/* Reports Data Table */}
-        <div className="op-table-container">
-          <table className="op-table">
-            <thead>
-              <tr>
-                <th>Report ID</th>
-                <th>Farmer Name</th>
-                <th>Target Field</th>
-                <th>Operation ID</th>
-                <th>Generated Date</th>
-                <th>Health Score</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map(rep => {
-                const isSelected = rep.id === selectedReportId;
-                return (
-                  <tr 
-                    key={rep.id} 
-                    className={isSelected ? 'selected' : ''}
-                    onClick={() => setSelectedReportId(rep.id)}
-                    style={{ cursor: 'pointer' }}
+      {/* Main Grid: Left List + Right Report Document */}
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
+        {/* Left Side: Report Selection List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#5F645D', textTransform: 'uppercase', paddingLeft: '2px' }}>
+            Generated Field Audits ({reports.length})
+          </div>
+          {reports.map(rep => {
+            const isSelected = rep.id === selectedReportId;
+            return (
+              <div
+                key={rep.id}
+                onClick={() => setSelectedReportId(rep.id)}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: isSelected ? '2px solid #1F6824' : '1px solid #D8D9D2',
+                  borderRadius: '6px',
+                  padding: '14px',
+                  cursor: 'pointer',
+                  boxShadow: isSelected ? '0 2px 6px rgba(31,104,36,0.12)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 700, color: '#1C201A' }}>
+                    {rep.id}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '3px',
+                      backgroundColor: rep.status === 'Ready' ? '#E7EFE5' : rep.status === 'Sent' ? '#EBF3F8' : '#FEF5E4',
+                      color: rep.status === 'Ready' ? '#2A3B27' : rep.status === 'Sent' ? '#4B6B80' : '#B07E28'
+                    }}
                   >
-                    <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{rep.id}</td>
-                    <td>{rep.farmerName}</td>
-                    <td><strong style={{ color: '#4F6848' }}>{rep.fieldName}</strong></td>
-                    <td style={{ fontFamily: 'monospace' }}>{rep.operationId}</td>
-                    <td style={{ color: '#6B7068', fontSize: '12px' }}>{rep.generatedDate}</td>
-                    <td>
-                      <strong style={{ color: rep.healthIndexScore < 80 ? '#B8862D' : '#4F6848' }}>
-                        {rep.healthIndexScore}%
-                      </strong>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${rep.status === 'Ready' ? 'success' : 'pending'}`}>
-                        {rep.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        className="op-btn op-btn-secondary op-btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedReportId(rep.id);
-                        }}
-                      >
-                        Preview Document
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    {rep.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#1C201A' }}>
+                  {rep.fieldName}
+                </div>
+                <div style={{ fontSize: '12px', color: '#5F645D', marginTop: '2px' }}>
+                  Farmer: {rep.farmerName}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#5F645D', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E8E9E3' }}>
+                  <span>Score: <strong style={{ color: rep.healthIndexScore >= 80 ? '#2E7D32' : '#D32F2F' }}>{rep.healthIndexScore}/100</strong></span>
+                  <span>{rep.generatedDate}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Serious PDF-Style Report Preview Document */}
+        {/* Right Side: Exact PDF/HTML Preview Document Layout requested by User */}
         {selectedReport && (
-          <div 
+          <div
             style={{
               backgroundColor: '#FFFFFF',
-              border: '1px solid #DDDED7',
-              borderRadius: '4px',
-              padding: '24px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+              border: '1px solid #D8D9D2',
+              borderRadius: '8px',
+              padding: '36px 40px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between',
-              fontFamily: 'serif'
+              gap: '16px'
             }}
           >
+            {/* Green Main Header */}
             <div>
-              {/* Serious Document Header */}
-              <div 
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  borderBottom: '2px solid #30432E',
-                  paddingBottom: '14px',
-                  marginBottom: '16px',
-                  fontFamily: 'sans-serif'
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#4F6848', letterSpacing: '1px' }}>
-                    AGRI SWARM OPERATOR PLATFORM
-                  </div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#20231F', margin: '2px 0 0 0' }}>
-                    FIELD INTELLIGENCE REPORT
-                  </h2>
-                </div>
-                <div style={{ textAlign: 'right', fontSize: '11px', color: '#6B7068', fontFamily: 'monospace' }}>
-                  <div>DOC ID: {selectedReport.id}</div>
-                  <div>DATE: {selectedReport.generatedDate}</div>
-                </div>
-              </div>
-
-              {/* Document Meta Grid */}
-              <div 
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '12px',
-                  backgroundColor: '#FAFBF8',
-                  padding: '12px',
-                  borderRadius: '3px',
-                  border: '1px solid #DDDED7',
-                  marginBottom: '16px',
-                  fontSize: '12px',
-                  fontFamily: 'sans-serif'
-                }}
-              >
-                <div>
-                  <span style={{ color: '#6B7068' }}>Farmer Name: </span>
-                  <strong>{selectedReport.farmerName}</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#6B7068' }}>Field Asset: </span>
-                  <strong>{selectedReport.fieldName} (4.8 ha Potato)</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#6B7068' }}>Location: </span>
-                  <strong>Thane, Maharashtra</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#6B7068' }}>Operation ID: </span>
-                  <strong style={{ fontFamily: 'monospace' }}>{selectedReport.operationId}</strong>
-                </div>
-              </div>
-
-              {/* Health Score Summary */}
-              <div style={{ marginBottom: '16px', fontFamily: 'sans-serif' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#20231F', marginBottom: '6px' }}>
-                  1. Executive Field Vigor Summary
-                </h3>
-                <p style={{ fontSize: '13px', color: '#20231F', lineHeight: 1.5 }}>
-                  Multispectral aerial imaging conducted over {selectedReport.fieldName} indicates an overall canopy vigor index of <strong>{selectedReport.healthIndexScore}%</strong>. High canopy reflectance uniformity is maintained across 33 of 36 grid zones.
-                </p>
-              </div>
-
-              {/* Verified AI Findings Section */}
-              <div style={{ marginBottom: '16px', fontFamily: 'sans-serif' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#20231F', marginBottom: '6px' }}>
-                  2. Validated Crop Anomalies & Detection Delineation
-                </h3>
-                <div className="op-table-container">
-                  <table className="op-table" style={{ fontSize: '12px' }}>
-                    <thead>
-                      <tr>
-                        <th>Zone</th>
-                        <th>Finding Type</th>
-                        <th>Confidence</th>
-                        <th>Soil Moisture</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>Zone 27</td>
-                        <td style={{ color: '#B64A43', fontWeight: 600 }}>Visible crop stress / yellowing</td>
-                        <td>91%</td>
-                        <td>23% (Low)</td>
-                      </tr>
-                      <tr>
-                        <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>Zone 14</td>
-                        <td style={{ color: '#B8862D' }}>Mild canopy density variance</td>
-                        <td>78%</td>
-                        <td>31%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Priority Actionable Recommendations */}
-              <div style={{ marginBottom: '16px', fontFamily: 'sans-serif' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#20231F', marginBottom: '6px' }}>
-                  3. Actionable Operational Directives
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedReport.priorityRecommendations.map((rec, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: '#20231F', lineHeight: 1.4 }}>
-                      <span style={{ fontWeight: 700, color: '#4F6848' }}>•</span>
-                      <span>{rec}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Scientific Notice */}
-              <div style={{ fontSize: '11px', color: '#6B7068', fontStyle: 'italic', borderTop: '1px solid #DDDED7', paddingTop: '8px', fontFamily: 'sans-serif' }}>
-                Report compiled by Human Operator Vikram Sharma following radiometric calibration and ground truth verification.
+              <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1F6824', margin: 0 }}>
+                AgriSwarm Crop Intelligence Audit
+              </h1>
+              <hr style={{ border: 0, borderTop: '1px solid #D8D9D2', margin: '8px 0 6px 0' }} />
+              <div style={{ fontSize: '12px', color: '#5F645D' }}>
+                Report Date: {selectedReport.generatedDate} | Field: {selectedReport.fieldName}
               </div>
             </div>
 
-            {/* Document Actions Bar */}
-            <div style={{ borderTop: '1px solid #EBECE6', paddingTop: '14px', marginTop: '16px', display: 'flex', gap: '8px', fontFamily: 'sans-serif' }}>
-              <button 
-                className="op-btn op-btn-secondary"
-                style={{ flex: 1 }}
-                onClick={async () => {
-                  const targetField = MOCK_FIELDS.find(f => f.name === selectedReport.fieldName || f.id === selectedReport.fieldName) || MOCK_FIELDS[0];
-                  await reportlabPdfService.exportReportLabPdf(
-                    selectedReport, 
-                    targetField, 
-                    MOCK_FINDINGS.filter(f => f.operationId === selectedReport.operationId || f.fieldId === targetField.id)
-                  );
-                }}
-              >
-                <Download size={14} /> Export ReportLab PDF
-              </button>
-              <button 
-                className="op-btn op-btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => {
-                  setSentStatusMessage(`Report ${selectedReport.id} dispatched to farmer ${selectedReport.farmerName} via SMS / Whatsapp link.`);
-                  setTimeout(() => setSentStatusMessage(null), 4000);
-                }}
-              >
-                <Send size={14} /> Send to Farmer {selectedReport.farmerName}
-              </button>
+            {/* Meta Grid (2 columns) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px', fontSize: '13px', color: '#1C201A' }}>
+              <div>
+                <span style={{ color: '#5F645D' }}>Crop Type: </span>
+                <strong>Potato</strong>
+              </div>
+              <div>
+                <span style={{ color: '#5F645D' }}>Field Area: </span>
+                <strong>{targetField.areaHa} ha ({(targetField.areaHa * 2.471).toFixed(1)} acres)</strong>
+              </div>
+              <div>
+                <span style={{ color: '#5F645D' }}>Sowing Date: </span>
+                <strong>{targetField.sowingDate || '2026-06-15'}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#5F645D' }}>Growth Stage: </span>
+                <strong>{targetField.cropStage || 'Tuber bulking stage'}</strong>
+              </div>
             </div>
 
-            {sentStatusMessage && (
-              <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#EBF0E9', color: '#30432E', fontSize: '12px', borderRadius: '3px', fontFamily: 'sans-serif' }}>
-                {sentStatusMessage}
+            {/* Dual Outlined KPI Highlight Cards (Side-by-Side) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', margin: '6px 0' }}>
+              {/* Crop Health Score Card */}
+              <div
+                style={{
+                  border: '1px solid #4CAF50',
+                  borderRadius: '6px',
+                  padding: '14px 18px',
+                  backgroundColor: '#FFFFFF'
+                }}
+              >
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#4CAF50', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  CROP HEALTH SCORE
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#1C201A', marginTop: '4px', fontFamily: 'monospace' }}>
+                  {selectedReport.healthIndexScore} / 100
+                </div>
               </div>
-            )}
+
+              {/* Soil Moisture Status Card */}
+              <div
+                style={{
+                  border: '1px solid #2196F3',
+                  borderRadius: '6px',
+                  padding: '14px 18px',
+                  backgroundColor: '#FFFFFF'
+                }}
+              >
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#2196F3', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  SOIL MOISTURE STATUS
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#2196F3', marginTop: '4px', fontFamily: 'monospace' }}>
+                  {targetField.moistureStatus || 'LOW'}
+                </div>
+              </div>
+            </div>
+
+            {/* Red Alert Findings Banner */}
+            <div
+              style={{
+                border: '1px solid #FFCDD2',
+                backgroundColor: '#FFF0F0',
+                borderRadius: '4px',
+                padding: '12px 16px',
+                color: '#D32F2F',
+                fontSize: '13px',
+                fontWeight: 600,
+                lineHeight: 1.4
+              }}
+            >
+              Findings: Low soil moisture detected in Zone 2. High moisture stress observed.
+            </div>
+
+            {/* Section 1: Zone Condition Analysis */}
+            <div style={{ marginTop: '8px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1F6824', margin: '0 0 10px 0' }}>
+                Zone Condition Analysis
+              </h2>
+              <div className="op-table-container">
+                <table className="op-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid #E0E0E0' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Zone</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Status</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Moisture</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Temperature</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Zone 1</td>
+                      <td style={{ padding: '8px 12px', color: '#2E7D32', fontWeight: 600 }}>Healthy</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>52.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>29.0°C</td>
+                      <td style={{ padding: '8px 12px' }}>None</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0', backgroundColor: '#FFF0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Zone 2</td>
+                      <td style={{ padding: '8px 12px', color: '#D32F2F', fontWeight: 600 }}>Low moisture</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: '#D32F2F', fontWeight: 700 }}>27.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>32.0°C</td>
+                      <td style={{ padding: '8px 12px', color: '#D32F2F', fontWeight: 600 }}>Moderate</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Zone 3</td>
+                      <td style={{ padding: '8px 12px', color: '#2E7D32', fontWeight: 600 }}>Possible nutrient stress</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>45.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>30.0°C</td>
+                      <td style={{ padding: '8px 12px' }}>Low</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Zone 4</td>
+                      <td style={{ padding: '8px 12px', color: '#2E7D32', fontWeight: 600 }}>Healthy</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>50.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>29.0°C</td>
+                      <td style={{ padding: '8px 12px' }}>None</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Section 2: Sensor Telemetry Readings */}
+            <div style={{ marginTop: '8px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1F6824', margin: '0 0 10px 0' }}>
+                Sensor Telemetry Readings
+              </h2>
+              <div className="op-table-container">
+                <table className="op-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid #E0E0E0' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Sensor</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Current Value</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Normal Range</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#1C201A' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Soil Moisture</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>27.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>35.0 - 65.0%</td>
+                      <td style={{ padding: '8px 12px', color: '#D32F2F', fontWeight: 700 }}>LOW</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Temperature</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>32.0°C</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>20.0 - 35.0°C</td>
+                      <td style={{ padding: '8px 12px', color: '#2E7D32', fontWeight: 700 }}>NORMAL</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>Humidity</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>65.0%</td>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>50.0 - 80.0%</td>
+                      <td style={{ padding: '8px 12px', color: '#2E7D32', fontWeight: 700 }}>NORMAL</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Section 3: Expert Agronomist Advice */}
+            <div style={{ marginTop: '8px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1F6824', margin: '0 0 8px 0' }}>
+                Expert Agronomist Advice
+              </h2>
+              <p style={{ fontSize: '13px', color: '#1C201A', lineHeight: 1.5, margin: 0 }}>
+                Check irrigation flow immediately in Zone 2 to prevent leaf wilting. Target soil moisture is above 35%.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E0E0E0', textAlign: 'center', fontSize: '12px', color: '#616161' }}>
+              Authorized Agritech Lead: Dr. S. K. Sharma
+            </div>
           </div>
         )}
       </div>

@@ -212,37 +212,59 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
               <div
                 style={{
                   position: 'relative',
-                  backgroundColor: '#162215',
-                  borderRadius: '4px',
-                  border: '1px solid #D8D9D2',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  backgroundColor: '#0F150F',
+                  borderRadius: '6px',
+                  border: '1px solid #30432E',
+                  overflow: 'hidden'
                 }}
               >
-                <svg width="100%" height="100%" viewBox="0 0 400 340">
-                  <defs>
-                    <radialGradient id="ndviAnomaly" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#AF413A" stopOpacity="0.9" />
-                      <stop offset="50%" stopColor="#B07E28" stopOpacity="0.75" />
-                      <stop offset="100%" stopColor="#435C3C" stopOpacity="0.4" />
-                    </radialGradient>
-                  </defs>
+                <img
+                  src="/assets/potato_ndvi.png"
+                  alt="NDVI Thermal Drone Scan"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                
+                {/* HUD Overlay Label */}
+                <div style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(15,20,15,0.85)', backdropFilter: 'blur(4px)', color: '#A8D5A2', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  🌿 NDVI MULTISPECTRAL HEATMAP
+                </div>
 
-                  <rect width="400" height="340" fill="#202F1E" />
-                  <circle cx="200" cy="170" r="95" fill="url(#ndviAnomaly)" />
+                {/* GSD Badge */}
+                <div style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(15,20,15,0.85)', backdropFilter: 'blur(4px)', color: '#E0E1D8', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'monospace' }}>
+                  GSD: 0.8 cm/px
+                </div>
 
-                  {/* AI Detection Bounding Overlay */}
-                  <rect x="110" y="80" width="180" height="180" fill="none" stroke="#AF413A" strokeWidth="2" strokeDasharray="5 3" />
-                  <rect x="110" y="80" width="140" height="18" fill="#AF413A" />
-                  <text x="115" y="93" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="monospace">
-                    NDVI ANOMALY: 0.32 (CRITICAL)
-                  </text>
-                </svg>
-
-                <div style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0,0,0,0.7)', color: '#FFFFFF', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 600 }}>
-                  NDVI HEATMAP SPECTRUM
+                {/* AI Detection Bounding Box HUD */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '25%',
+                    left: '25%',
+                    width: '50%',
+                    height: '50%',
+                    border: '2px dashed #EF5350',
+                    backgroundColor: 'rgba(239, 83, 80, 0.15)',
+                    boxShadow: '0 0 12px rgba(239,83,80,0.4)',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -24,
+                      left: -2,
+                      backgroundColor: '#EF5350',
+                      color: '#FFFFFF',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      fontFamily: 'monospace',
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    NDVI ANOMALY: 0.32 (CRITICAL CANOPY STRESS)
+                  </div>
                 </div>
               </div>
             )}
@@ -252,29 +274,59 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
               <div
                 style={{
                   position: 'relative',
-                  backgroundColor: '#233020',
-                  borderRadius: '4px',
-                  border: '1px solid #D8D9D2',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  backgroundColor: '#0F150F',
+                  borderRadius: '6px',
+                  border: '1px solid #30432E',
+                  overflow: 'hidden'
                 }}
               >
-                <svg width="100%" height="100%" viewBox="0 0 400 340">
-                  <rect width="400" height="340" fill="#2E3F2A" />
-                  <circle cx="200" cy="170" r="95" fill="#546648" />
-                  <circle cx="200" cy="170" r="65" fill="#887D43" />
+                <img
+                  src="/assets/potato_rgb.png"
+                  alt="High-Res TrueColor RGB Aerial Photo"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
 
-                  {/* Bounding Box Overlay */}
-                  <rect x="110" y="80" width="180" height="180" fill="none" stroke="#FFFFFF" strokeWidth="2" />
-                  <text x="115" y="93" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="monospace">
-                    RGB LEAF YELLOWING DETECTED
-                  </text>
-                </svg>
+                {/* HUD Overlay Label */}
+                <div style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(15,20,15,0.85)', backdropFilter: 'blur(4px)', color: '#FFFFFF', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  📷 HIGH-RES TRUECOLOR RGB
+                </div>
 
-                <div style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0,0,0,0.7)', color: '#FFFFFF', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 600 }}>
-                  HIGH-RES TRUECOLOR RGB
+                {/* Altitude Badge */}
+                <div style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(15,20,15,0.85)', backdropFilter: 'blur(4px)', color: '#E0E1D8', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'monospace' }}>
+                  ALT: 15 m
+                </div>
+
+                {/* AI Leaf Lesion Bounding Box HUD */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '20%',
+                    left: '20%',
+                    width: '60%',
+                    height: '60%',
+                    border: '2px solid #FFD54F',
+                    backgroundColor: 'rgba(255, 213, 79, 0.1)',
+                    boxShadow: '0 0 10px rgba(255,213,79,0.3)',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -24,
+                      left: -2,
+                      backgroundColor: '#FFD54F',
+                      color: '#1C201A',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      fontFamily: 'monospace',
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    POTATO LEAF LESION DETECTED (91% CONFIDENCE)
+                  </div>
                 </div>
               </div>
             )}
