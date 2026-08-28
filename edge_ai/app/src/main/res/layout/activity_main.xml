@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#050505">
+
+    <!-- TOP SECTION: DEDICATED CAMERA & LIVE OVERLAYS -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:background="#222222">
+
+        <!-- Actual Camera Feed -->
+        <TextureView
+            android:id="@+id/cameraPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+            
+        <com.example.edge_ai.BoundingBoxView
+            android:id="@+id/boundingBoxView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Top-Left FPS & Status Overlay -->
+        <TextView
+            android:id="@+id/tvFps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:background="#88000000"
+            android:padding="6dp"
+            android:text="CAM FPS: -- | RES: 640x480 | AI: IDLE"
+            android:textColor="#00FF00"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"/>
+
+        <!-- Top-Right Graph Overlay -->
+        <LinearLayout
+            android:layout_width="120dp"
+            android:layout_height="60dp"
+            android:layout_gravity="top|end"
+            android:background="#88000000"
+            android:orientation="vertical"
+            android:padding="4dp"
+            android:layout_margin="4dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ML COMPUTE LOAD"
+                android:textColor="#00FFFF"
+                android:textSize="8sp"
+                android:textAlignment="center"/>
+            <com.example.edge_ai.GraphView
+                android:id="@+id/graphView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </LinearLayout>
+
+        <!-- Bottom Sensor Overlay -->
+        <TextView
+            android:id="@+id/tvSensorData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="#AA000000"
+            android:padding="6dp"
+            android:textColor="#00FFFF"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:text="GPS: WAITING...\nGYRO: WAITING...\nTMP: --.-°C  HUM: --%  SOIL: --%"/>
+    </FrameLayout>
+
+    <!-- BOTTOM SECTION: MAIN APP CONTENT -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        
+        <ScrollView
+            android:id="@+id/mainScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="100dp">
+
+                <!-- HEADER -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="AGRISWARM EDGE AI"
+                    android:textColor="#00FF00"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <!-- ML PIPELINE STAGES -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="3"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp">
+                    
+                    <TextView
+                        android:id="@+id/tvStage1"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="[1] FULL SCAN"
+                        android:textColor="#555555"
+                        android:textSize="10sp"
+                        android:textAlignment="center"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/tvStage2"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="[2] ISOLATION"
+                        android:textColor="#555555"
+                        android:textSize="10sp"
+                        android:textAlignment="center"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/tvStage3"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="[3] ML CLASSIFY"
+                        android:textColor="#555555"
+                        android:textSize="10sp"
+                        android:textAlignment="center"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvNetworkStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="NETWORK: OFFLINE"
+                    android:textColor="#AAAAAA"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- FIELD IMAGE & HEATMAP (BOXES) -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="FIELD ANALYSIS (STAGE 1)"
+                    android:textColor="#00FF00"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#111111">
+                    
+                    <ImageView
+                        android:id="@+id/ivFieldImage1"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/field_demo" />
+
+                    <com.example.edge_ai.OverlayView
+                        android:id="@+id/overlayView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+                
+                <!-- SIMULATED TEMPERATURE RISK -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SIMULATED TEMPERATURE RISK"
+                    android:textColor="#FFA500"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="#111111">
+                    
+                    <ImageView
+                        android:id="@+id/ivFieldImage2"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/field_demo" />
+
+                    <com.example.edge_ai.HeatmapOverlayView
+                        android:id="@+id/heatmapOverlayView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+
+                <Button
+                    android:id="@+id/btnStartScan"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="[ START AUTOMATED FIELD SCAN ]"
+                    android:backgroundTint="#333333"
+                    android:textColor="#00FF00"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- TERMINAL LOG -->
+                <TextView
+                    android:id="@+id/tvTerminal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="#AAAAAA"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:background="#0A0A0A"
+                    android:padding="8dp"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone"/>
+
+                <!-- TARGETS LIST -->
+                <LinearLayout
+                    android:id="@+id/llTargets"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp">
+                    
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="TARGET WAYPOINTS (DEMO GPS)"
+                        android:textColor="#FFA500"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+                        
+                    <TextView
+                        android:id="@+id/tvTargetsList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#AAAAAA"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- STAGE 2 RESULTS -->
+                <LinearLayout
+                    android:id="@+id/llStage2Results"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp">
+                    
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="TARGETED ANALYSIS COMPLETE\n(LOCAL DEMO RESCAN IMAGES)"
+                        android:textColor="#00FF00"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+                        
+                    <LinearLayout
+                        android:id="@+id/llRescanImages"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="4"
+                        android:layout_marginBottom="8dp">
+                        
+                        <ImageView
+                            android:id="@+id/ivRescan1"
+                            android:layout_width="0dp"
+                            android:layout_height="80dp"
+                            android:layout_weight="1"
+                            android:scaleType="centerCrop"
+                            android:layout_marginEnd="4dp"
+                            android:src="@drawable/field_closeup"/>
+                        <ImageView
+                            android:id="@+id/ivRescan2"
+                            android:layout_width="0dp"
+                            android:layout_height="80dp"
+                            android:layout_weight="1"
+                            android:scaleType="centerCrop"
+                            android:layout_marginEnd="4dp"
+                            android:src="@drawable/field_closeup"/>
+                        <ImageView
+                            android:id="@+id/ivRescan3"
+                            android:layout_width="0dp"
+                            android:layout_height="80dp"
+                            android:layout_weight="1"
+                            android:scaleType="centerCrop"
+                            android:layout_marginEnd="4dp"
+                            android:src="@drawable/field_closeup"/>
+                        <ImageView
+                            android:id="@+id/ivRescan4"
+                            android:layout_width="0dp"
+                            android:layout_height="80dp"
+                            android:layout_weight="1"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/field_closeup"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvStage2Details"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#AAAAAA"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- FINAL REPORT -->
+                <LinearLayout
+                    android:id="@+id/llFinalReport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginBottom="32dp">
+                    
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="FIELD SCAN COMPLETE"
+                        android:textColor="#00FF00"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+                        
+                    <TextView
+                        android:id="@+id/tvFinalReportText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#AAAAAA"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                        
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- WI-FI SHARE ANIMATION OVERLAY -->
+        <LinearLayout
+            android:id="@+id/llWifiShareOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#E6000000"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            android:padding="32dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="((( WI-FI DIRECT )))"
+                android:textColor="#00FF00"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="24dp"/>
+                
+            <TextView
+                android:id="@+id/tvWifiStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Initializing Ad-Hoc Network..."
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:fontFamily="monospace"/>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>
