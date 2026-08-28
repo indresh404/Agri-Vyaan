@@ -36,6 +36,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.4
   intl: ^0.20.2
+  http: ^1.2.2
+  path_provider: ^2.1.6
+  share_plus: ^13.3.0
+  pdf: ^3.13.0
 
 dev_dependencies:
   flutter_test:

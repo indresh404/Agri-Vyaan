@@ -203,7 +203,7 @@ class ProfileScreen extends StatelessWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.info_outline),
-                    title: const Text('AgriSwarm v1.0.0'),
+                    title: const Text('Agrivyaan v1.0.0'),
                     onTap: () {},
                   ),
                 ],
@@ -239,9 +239,9 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('AgriSwarm Support'),
+          title: const Text('Agrivyaan Support'),
           content: const Text(
-            'For assistance, contact support at support@agriswarm.com or call 1800-123-4567.\n\nOur agronomy experts are available 24/7.',
+            'For assistance, contact support at support@agrivyaan.com or call 1800-123-4567.\n\nOur agronomy experts are available 24/7.',
           ),
           actions: [
             TextButton(
@@ -284,7 +284,7 @@ class ProfileScreen extends StatelessWidget {
                       Icon(Icons.psychology, color: Colors.green.shade800, size: 28),
                       const SizedBox(width: 8),
                       const Text(
-                        'AgriSwarm',
+                        'Agrivyaan',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
                       ),
                     ],

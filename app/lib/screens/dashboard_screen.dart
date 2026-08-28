@@ -79,7 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              // AgriSwarm logo
+              // Agrivyaan logo
               Container(
                 width: 42,
                 height: 42,
@@ -97,7 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AgriSwarm',
+                      'Agrivyaan',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,

@@ -12,6 +12,7 @@ import '../widgets/zone_card.dart';
 import '../widgets/field_zone_map.dart';
 import 'add_field_screen.dart';
 import 'zone_details_screen.dart';
+import '../widgets/custom_widgets.dart';
 
 /// Comprehensive single-field view with health, sensors, zones, problems, and improvements.
 class FieldOverviewScreen extends StatefulWidget {
@@ -317,6 +318,24 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
                   ),
                 ],
 
+                // Drone images section
+                const SizedBox(height: 24),
+                _buildSectionTitle('Drone Scan Images', Icons.photo_library_outlined),
+                const SizedBox(height: 12),
+                _buildImagesSection(),
+
+                // Analytics trend charts section
+                const SizedBox(height: 24),
+                _buildSectionTitle('Field Analytics Trend Progress', Icons.trending_up_rounded),
+                const SizedBox(height: 12),
+                _buildTrendChartsSection(),
+
+                // Expert recommendations and advice section
+                const SizedBox(height: 24),
+                _buildSectionTitle('Detailed Advice & Solutions', Icons.psychology_outlined),
+                const SizedBox(height: 12),
+                _buildAdviceSection(),
+
                 const SizedBox(height: 32),
               ]),
             ),
@@ -496,6 +515,220 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
           fieldName: _field.name,
         ),
       ),
+    );
+  }
+
+  Widget _buildImagesSection() {
+    return GridView.count(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      children: _field.zones.map((zone) {
+        final isProblem = zone.severity != null && zone.severity!.toLowerCase() != 'none';
+        return Card(
+          elevation: 0,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  color: Colors.green.shade50,
+                  width: double.infinity,
+                  child: const Icon(Icons.photo, size: 36, color: Colors.green),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${zone.name} Drone Scan',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isProblem ? Colors.red : Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          zone.problem ?? 'Healthy',
+                          style: TextStyle(
+                            color: isProblem ? Colors.red : Colors.green,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTrendChartsSection() {
+    final healthHistory = [
+      (_field.healthScore - 4.0).clamp(0.0, 100.0),
+      (_field.healthScore - 2.0).clamp(0.0, 100.0),
+      _field.healthScore,
+      _field.healthScore,
+    ];
+    final moistureHistory = [
+      (_field.soilMoisture - 5.0).clamp(0.0, 100.0),
+      (_field.soilMoisture + 2.0).clamp(0.0, 100.0),
+      _field.soilMoisture,
+      _field.soilMoisture,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CustomTrendChart(
+          values: healthHistory,
+          labels: const ['Scan 1', 'Scan 2', 'Scan 3', 'Current'],
+          title: 'Health Trend Progress',
+          lineColor: Colors.green,
+        ),
+        const SizedBox(height: 24),
+        CustomTrendChart(
+          values: moistureHistory,
+          labels: const ['Scan 1', 'Scan 2', 'Scan 3', 'Current'],
+          title: 'Soil Moisture Trend Index',
+          lineColor: Colors.blue,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdviceSection() {
+    final recommendationZones = _field.zones.where((z) => z.severity != null && z.severity!.toLowerCase() != 'none').toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (recommendationZones.isEmpty)
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.grey.shade200),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  Icon(Icons.check_circle_outline, color: Colors.green, size: 48),
+                  SizedBox(height: 12),
+                  Text(
+                     'No Action Required',
+                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                     'All zones are in healthy conditions. Continue routine monitoring.',
+                     textAlign: TextAlign.center,
+                     style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...recommendationZones.map((zone) {
+            final isCritical = zone.severity!.toLowerCase() == 'high' || zone.severity!.toLowerCase() == 'critical' || zone.severity!.toLowerCase() == 'moderate';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: isCritical ? Colors.red.shade200 : Colors.grey.shade200, width: 1.5),
+                ),
+                color: isCritical ? Colors.red.shade50.withValues(alpha: 0.33) : Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isCritical ? Icons.error_outline : Icons.info_outline,
+                            color: isCritical ? Colors.red : Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Problem: ${zone.problem} in ${zone.name}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isCritical ? Colors.red.shade900 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'AI Assessment: ${zone.problem ?? "Field conditions are warning stress levels."}',
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.3),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGreenSurface,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Solution: Action Required',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              zone.recommendation ?? 'Monitor status regularly.',
+                              style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary, height: 1.3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+      ],
     );
   }
 }

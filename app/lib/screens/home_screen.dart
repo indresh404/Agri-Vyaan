@@ -588,7 +588,7 @@ class HomeScreen extends StatelessWidget {
                       Icon(Icons.psychology, color: Colors.green.shade800, size: 28),
                       const SizedBox(width: 8),
                       const Text(
-                        'AgriSwarm',
+                        'Agrivyaan',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
                       ),
                     ],

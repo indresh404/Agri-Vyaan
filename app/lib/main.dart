@@ -18,18 +18,18 @@ import 'utils/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AgriSwarmApp());
+  runApp(const AgrivyaanApp());
 }
 
-class AgriSwarmApp extends StatelessWidget {
-  const AgriSwarmApp({super.key});
+class AgrivyaanApp extends StatelessWidget {
+  const AgrivyaanApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return AppStateProvider(
       notifier: AppState(),
       child: MaterialApp(
-        title: 'AgriSwarm',
+        title: 'Agrivyaan',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.theme,
         home: const AppShell(),
@@ -126,7 +126,7 @@ class _AppShellState extends State<AppShell> {
                       if (width > 1000) ...[
                         const SizedBox(width: 10),
                         const Text(
-                          'AgriSwarm',
+                          'Agrivyaan',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -295,7 +295,7 @@ class _AppShellState extends State<AppShell> {
               ),
               const SizedBox(height: 20),
               const Text(
-                'AgriSwarm Quick Actions',
+                'Agrivyaan Quick Actions',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 20),

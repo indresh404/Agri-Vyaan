@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Central theme constants for the AgriSwarm app.
+/// Central theme constants for the Agrivyaan app.
 class AppTheme {
   AppTheme._();
 
