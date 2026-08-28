@@ -1,137 +1,156 @@
 import 'dart:convert';
-import 'package:flutter/material.dart'; // Add this import for Color
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
 class WeatherService {
-  static const String baseUrl = 'YOUR_API_BASE_URL';
-  static const String apiKey = 'YOUR_API_KEY';
+  static const String _forecastUrl = 'https://api.open-meteo.com/v1/forecast';
+  static const String _geocodingUrl =
+      'https://geocoding-api.open-meteo.com/v1/search';
 
-  // Fetch weather data from API
   Future<List<WeatherForecast>> fetchWeatherForecast({
     required double latitude,
     required double longitude,
   }) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          '$baseUrl/forecast?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric',
-        ),
-        headers: {'Content-Type': 'application/json'},
-      );
+    final response = await http.get(
+      Uri.parse(_forecastUrl).replace(
+        queryParameters: {
+          'latitude': latitude.toString(),
+          'longitude': longitude.toString(),
+          'current':
+              'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,cloud_cover',
+          'daily':
+              'temperature_2m_max,precipitation_probability_max,relative_humidity_2m_max,wind_speed_10m_max,weather_code',
+          'forecast_days': '7',
+          'timezone': 'auto',
+        },
+      ),
+    );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return _parseWeatherData(data);
-      } else {
-        throw Exception('Failed to load weather data: ${response.statusCode}');
-      }
-    } catch (e) {
-      // Return mock data for development
-      return getMockWeatherData();
+    if (response.statusCode != 200) {
+      throw Exception('Weather service returned ${response.statusCode}');
     }
+
+    return _parseOpenMeteoData(json.decode(response.body));
   }
 
-  // Fetch AI summary from your backend
+  Future<List<WeatherForecast>> fetchWeatherForLocation(String location) async {
+    final response = await http.get(
+      Uri.parse(_geocodingUrl).replace(
+        queryParameters: {
+          'name': location,
+          'count': '1',
+          'language': 'en',
+          'format': 'json',
+        },
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Location service returned ${response.statusCode}');
+    }
+
+    final results =
+        (json.decode(response.body)['results'] as List<dynamic>?) ?? [];
+    if (results.isEmpty) {
+      throw Exception('Could not find weather location: $location');
+    }
+
+    final result = results.first as Map<String, dynamic>;
+    return fetchWeatherForecast(
+      latitude: (result['latitude'] as num).toDouble(),
+      longitude: (result['longitude'] as num).toDouble(),
+    );
+  }
+
   Future<String> fetchAISummary({
     required List<WeatherForecast> forecast,
     required String cropType,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/ai/weather-summary'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'forecast': forecast.map((f) => _forecastToJson(f)).toList(),
-          'cropType': cropType,
-        }),
-      );
+  }) async => _generateLocalAISummary(forecast);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['summary'] ?? _generateLocalAISummary(forecast);
-      } else {
-        return _generateLocalAISummary(forecast);
-      }
-    } catch (e) {
-      return _generateLocalAISummary(forecast);
-    }
-  }
-
-  // Parse API response
-  List<WeatherForecast> _parseWeatherData(Map<String, dynamic> data) {
+  List<WeatherForecast> _parseOpenMeteoData(Map<String, dynamic> data) {
     final forecasts = <WeatherForecast>[];
+    final daily = data['daily'] as Map<String, dynamic>;
+    final current = data['current'] as Map<String, dynamic>;
+    final dates = List<String>.from(daily['time'] as List<dynamic>);
+    for (int i = 0; i < dates.length; i++) {
+      final date = DateTime.parse(dates[i]);
+      final rain = _numberAt(daily['precipitation_probability_max'], i);
+      final windSpeed = _numberAt(daily['wind_speed_10m_max'], i);
+      final temperature = i == 0
+          ? _number(current['temperature_2m'])
+          : _numberAt(daily['temperature_2m_max'], i);
+      final weatherCode = (_numberAt(daily['weather_code'], i)).round();
 
-    // Parse daily forecast from API response
-    final daily = data['daily'] ?? [];
-    final current = data['current'] ?? {};
-
-    // Add today's forecast
-    if (current.isNotEmpty) {
       forecasts.add(
         WeatherForecast(
-          dayName: 'Today',
-          date: _formatDate(DateTime.now()),
-          temperature: (current['temp'] ?? 0).toDouble(),
-          rainProbability: (current['rain'] ?? 0).toDouble(),
-          humidity: (current['humidity'] ?? 0).toDouble(),
-          windSpeed: (current['wind_speed'] ?? 0).toDouble(),
-          weatherCondition: current['weather']?[0]?['description'] ?? '',
+          dayName: i == 0 ? 'Today' : _getDayName(date),
+          date: _formatDate(date),
+          temperature: temperature,
+          rainProbability: rain,
+          humidity: i == 0
+              ? _number(current['relative_humidity_2m'])
+              : _numberAt(daily['relative_humidity_2m_max'], i),
+          windSpeed: windSpeed,
+          weatherCondition: _weatherDescription(weatherCode),
           sprayingCondition: _calculateSprayingCondition(
-            rain: (current['rain'] ?? 0).toDouble(),
-            windSpeed: (current['wind_speed'] ?? 0).toDouble(),
+            rain: rain,
+            windSpeed: windSpeed,
           ),
-          aiSummary: 'Weather data loaded successfully',
-          bestWindow: _calculateBestWindow(
-            rain: (current['rain'] ?? 0).toDouble(),
-            windSpeed: (current['wind_speed'] ?? 0).toDouble(),
-          ),
+          aiSummary: i == 0
+              ? _generateLocalAISummaryForCode(weatherCode, rain)
+              : '',
+          bestWindow: _calculateBestWindow(rain: rain, windSpeed: windSpeed),
         ),
       );
-    }
-
-    // Add next 5 days
-    if (daily.isNotEmpty) {
-      for (int i = 0; i < daily.length && i < 5; i++) {
-        final day = daily[i];
-        final date = DateTime.now().add(Duration(days: i + 1));
-        forecasts.add(
-          WeatherForecast(
-            dayName: _getDayName(date),
-            date: _formatDate(date),
-            temperature: (day['temp']?['day'] ?? 0).toDouble(),
-            rainProbability: (day['rain'] ?? 0).toDouble(),
-            humidity: (day['humidity'] ?? 0).toDouble(),
-            windSpeed: (day['wind_speed'] ?? 0).toDouble(),
-            weatherCondition: day['weather']?[0]?['description'] ?? '',
-            sprayingCondition: _calculateSprayingCondition(
-              rain: (day['rain'] ?? 0).toDouble(),
-              windSpeed: (day['wind_speed'] ?? 0).toDouble(),
-            ),
-            aiSummary: '',
-            bestWindow: _calculateBestWindow(
-              rain: (day['rain'] ?? 0).toDouble(),
-              windSpeed: (day['wind_speed'] ?? 0).toDouble(),
-            ),
-          ),
-        );
-      }
     }
 
     return forecasts;
   }
 
-  Map<String, dynamic> _forecastToJson(WeatherForecast forecast) {
-    return {
-      'dayName': forecast.dayName,
-      'date': forecast.date,
-      'temperature': forecast.temperature,
-      'rainProbability': forecast.rainProbability,
-      'humidity': forecast.humidity,
-      'windSpeed': forecast.windSpeed,
-      'weatherCondition': forecast.weatherCondition,
-      'sprayingCondition': forecast.sprayingCondition,
-    };
+  double _number(dynamic value) => (value as num?)?.toDouble() ?? 0;
+
+  double _numberAt(dynamic values, int index) {
+    final list = values as List<dynamic>;
+    return _number(list[index]);
+  }
+
+  String _weatherDescription(int code) {
+    if (code == 0) {
+      return 'Clear sky';
+    }
+    if (code <= 3) {
+      return 'Cloudy';
+    }
+    if (code <= 48) {
+      return 'Foggy';
+    }
+    if (code <= 57) {
+      return 'Drizzle';
+    }
+    if (code <= 67 || code >= 80 && code <= 82) {
+      return 'Rainy';
+    }
+    if (code <= 77) {
+      return 'Snowy';
+    }
+    return 'Thunderstorm';
+  }
+
+  String _generateLocalAISummaryForCode(int code, double rain) {
+    if (code >= 95) {
+      return 'Thunderstorms are possible. Avoid spraying and monitor field drainage.';
+    }
+    if (rain >= 60) {
+      return 'Rain is likely today. Avoid spraying because products may wash off.';
+    }
+    if (code >= 51 && code <= 82) {
+      return 'Rain or drizzle is possible. Check the hourly forecast before spraying.';
+    }
+    if (code <= 3) {
+      return 'Dry conditions are expected. Early morning is the best time to spray.';
+    }
+    return 'Moderate weather conditions. Check wind and rain before spraying.';
   }
 
   // Calculate spraying condition based on weather
