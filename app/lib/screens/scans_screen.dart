@@ -178,6 +178,7 @@ class ScansScreen extends StatefulWidget {
 
                   // Field Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: selectedFieldId,
                     items: appState.fields
                         .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
@@ -193,6 +194,7 @@ class ScansScreen extends StatefulWidget {
 
                   // Scan Type Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: selectedScanType,
                     items: const [
                       DropdownMenuItem(value: 'Crop Health Scan', child: Text('Crop Health Scan')),
