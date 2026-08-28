@@ -63,6 +63,7 @@ class FieldsScreen extends StatefulWidget {
                         Expanded(
                           flex: 1,
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: selectedUnit,
                             items: const [
                               DropdownMenuItem(
@@ -81,6 +82,7 @@ class FieldsScreen extends StatefulWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: selectedCrop,
                       items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean', 'Maize', 'Potato']
                           .map((c) =>
@@ -96,6 +98,7 @@ class FieldsScreen extends StatefulWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: selectedStage,
                       items: const [
                         DropdownMenuItem(
@@ -235,6 +238,7 @@ class FieldsScreen extends StatefulWidget {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: selectedFieldId,
                     items: appState.fields
                         .map((f) =>
@@ -255,6 +259,7 @@ class FieldsScreen extends StatefulWidget {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: selectedZoneId,
                     items: selectedField.zones
                         .map((z) =>

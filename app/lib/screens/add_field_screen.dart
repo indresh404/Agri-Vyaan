@@ -203,14 +203,23 @@ class _AddFieldScreenState extends State<AddFieldScreen> {
               InkWell(
                 onTap: _pickDate,
                 borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.calendar_today_outlined,
-                        color: AppTheme.textLight),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.border),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    DateFormat('MMMM d, y').format(_sowingDate),
-                    style: const TextStyle(fontSize: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, color: AppTheme.textLight, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        DateFormat('MMMM d, y').format(_sowingDate),
+                        style: const TextStyle(fontSize: 16, color: AppTheme.textPrimary),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.arrow_drop_down, color: AppTheme.textLight),
+                    ],
                   ),
                 ),
               ),
@@ -224,10 +233,14 @@ class _AddFieldScreenState extends State<AddFieldScreen> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                   hintText: 'Any additional notes about this field...',
-                  prefixIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 40),
-                    child:
-                        Icon(Icons.notes_outlined, color: AppTheme.textLight),
+                  alignLabelWithHint: true,
+                  prefixIcon: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: 1.0,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Icon(Icons.notes_outlined, color: AppTheme.textLight),
+                    ),
                   ),
                 ),
               ),
