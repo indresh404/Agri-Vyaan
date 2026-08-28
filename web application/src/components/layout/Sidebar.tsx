@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Operational Status & Profile */}
+      {/* Bottom Operational Status */}
       <div 
         style={{
           borderTop: '1px solid #EBECE6',
@@ -185,9 +185,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             gap: '8px',
             fontSize: '11px',
             color: '#30432E',
-            marginBottom: '10px',
             backgroundColor: '#EBF0E9',
-            padding: '5px 8px',
+            padding: '6px 10px',
             borderRadius: '4px',
             border: '1px solid rgba(79, 104, 72, 0.2)'
           }}
@@ -202,34 +201,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           <span style={{ fontWeight: 600 }}>System Operational</span>
           <ShieldCheck size={13} style={{ marginLeft: 'auto', color: '#4F6848' }} />
-        </div>
-
-        {/* Operator Profile Card */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div 
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              backgroundColor: '#DDDED7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#30432E',
-              fontWeight: 600,
-              fontSize: '12px'
-            }}
-          >
-            VS
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#20231F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Vikram Sharma
-            </div>
-            <div style={{ fontSize: '11px', color: '#6B7068' }}>
-              Operator #04
-            </div>
-          </div>
         </div>
       </div>
     </aside>

@@ -153,7 +153,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 </div>
                 <div>
                   <span style={{ color: '#6B7068' }}>Field Asset: </span>
-                  <strong>{selectedReport.fieldName} (4.8 ha Wheat)</strong>
+                  <strong>{selectedReport.fieldName} (4.8 ha Potato)</strong>
                 </div>
                 <div>
                   <span style={{ color: '#6B7068' }}>Location: </span>

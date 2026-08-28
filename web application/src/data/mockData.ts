@@ -31,70 +31,70 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     id: 'REQ-1024',
     farmerName: 'Ramesh Kumar',
     fieldId: 'FIELD-A',
-    fieldName: 'Field A (Cotton)',
+    fieldName: 'Field A (Potato)',
     location: 'Thane, Maharashtra',
     requestedDate: '2026-08-26',
     priority: 'High',
     status: 'In Progress',
-    notes: 'Visible leaf discoloration in northern parcel. Zone 2 moisture dropped from 38% to 27% over 48 hours. Requesting multispectral analysis.',
+    notes: 'Visible late blight symptoms on potato foliage in northern parcel. Zone 2 moisture dropped from 38% to 27% over 48 hours. Requesting multispectral analysis.',
     areaHa: 4.8,
-    crop: 'Cotton',
+    crop: 'Potato',
     previousOperationsCount: 3
   },
   {
     id: 'REQ-1025',
     farmerName: 'Suresh Patil',
     fieldId: 'FIELD-B',
-    fieldName: 'Field B (Tomato)',
+    fieldName: 'Field B (Potato)',
     location: 'Kalyan, Maharashtra',
     requestedDate: '2026-08-24',
     priority: 'Medium',
     status: 'Completed',
-    notes: 'Brown spots appearing on tomato leaves in Zone 2. Possible Early Leaf Blight. Requesting full field analysis.',
+    notes: 'Brown/dark lesions appearing on potato leaves in Zone 2. Possible Early Blight (Alternaria solani). Requesting full field analysis.',
     areaHa: 6.2,
-    crop: 'Tomato',
+    crop: 'Potato',
     previousOperationsCount: 5
   },
   {
     id: 'REQ-1026',
     farmerName: 'Anil Deshmukh',
     fieldId: 'FIELD-C',
-    fieldName: 'Field C (Wheat)',
+    fieldName: 'Field C (Potato)',
     location: 'Bhiwandi, Maharashtra',
     requestedDate: '2026-08-25',
     priority: 'Low',
     status: 'Completed',
-    notes: 'Moisture/soil scan for germination-stage wheat field. Even sprouting check.',
+    notes: 'Moisture/soil scan for tuber-bulking stage potato field. Uniform canopy check requested.',
     areaHa: 3.5,
-    crop: 'Wheat',
+    crop: 'Potato',
     previousOperationsCount: 2
   },
   {
     id: 'REQ-1027',
     farmerName: 'Sunita Jadhav',
     fieldId: 'FIELD-D',
-    fieldName: 'Field D (Soybean)',
+    fieldName: 'Field D (Potato)',
     location: 'Panvel, Maharashtra',
     requestedDate: '2026-08-24',
     priority: 'High',
     status: 'Pending',
-    notes: 'Suspected pest damage along field perimeter. Needs emergency evaluation.',
+    notes: 'Suspected Black Scurf (Rhizoctonia solani) damage along field perimeter zones. Needs emergency multispectral evaluation.',
     areaHa: 5.1,
-    crop: 'Soybean',
+    crop: 'Potato',
     previousOperationsCount: 1
   },
   {
     id: 'REQ-1028',
     farmerName: 'Prakash Shinde',
     fieldId: 'FIELD-E',
-    fieldName: 'Field E (Sugarcane)',
+    fieldName: 'Field E (Potato)',
     location: 'Vasai, Maharashtra',
     requestedDate: '2026-08-24',
     priority: 'Medium',
     status: 'Scheduled',
-    notes: 'Baseline mapping for upcoming season planning.',
+    notes: 'Baseline NDVI mapping for upcoming potato planting season planning.',
     areaHa: 7.0,
-    crop: 'Sugarcane',
+    crop: 'Potato',
     previousOperationsCount: 4
   }
 ];
@@ -121,55 +121,55 @@ const fieldCSensors: SensorReading[] = [
 export const MOCK_FIELDS: FieldAsset[] = [
   {
     id: 'FIELD-A',
-    name: 'Field A (Cotton)',
+    name: 'Field A (Potato)',
     farmerName: 'Ramesh Kumar',
     location: 'Thane, Maharashtra',
-    crop: 'Cotton',
+    crop: 'Potato',
     areaHa: 4.8,
     sowingDate: '2026-06-15',
-    cropStage: 'Flowering stage',
+    cropStage: 'Tuber bulking stage',
     status: 'Attention Required',
     healthScore: 78,
     prevHealthScore: 84,
     lastScan: 'Today, 10:42 AM',
     moistureStatus: 'LOW',
-    activeAlerts: ['Zone 2: Low Soil Moisture Alert', 'Early Moisture Warning — Potential Stress'],
+    activeAlerts: ['Zone 2: Low Soil Moisture Alert — Potato Tuber Stress Risk', 'Zone 27: Late Blight Canopy Warning'],
     sensors: fieldASensors,
     zones: generateZones({
-      2:  { status: 'Low moisture',           soilMoisture: 27, temperature: 32, stressType: 'Low moisture (27%)', confidence: 91, recommendedAction: 'Check irrigation in Zone 2 immediately.', aiExplanation: 'Soil moisture declined from 38% to 27% over the last 48 hours.', gpsCoords: '19.2184, 72.9781' },
-      3:  { status: 'Possible nutrient stress', soilMoisture: 45, temperature: 30, stressType: 'Possible nutrient stress', confidence: 78, recommendedAction: 'Apply nitrogen-rich fertilizer dose.', aiExplanation: 'Mild discoloration detected in crop leaves.' },
-      27: { status: 'High Priority',            soilMoisture: 23, temperature: 33, stressType: 'Visible crop stress / yellowing', confidence: 91, recommendedAction: 'Prioritize this zone for targeted soil inspection due to detected visible crop stress.', aiExplanation: 'Chlorophyll reflectance anomaly detected across 0.4 ha area.', gpsCoords: '19.2184, 72.9781' }
+      2:  { status: 'Low moisture',           soilMoisture: 27, temperature: 32, stressType: 'Low moisture (27%) — Potato tuber stress risk', confidence: 91, recommendedAction: 'Check irrigation in Zone 2 immediately. Potatoes need ≥35% moisture during bulking.', aiExplanation: 'Soil moisture declined from 38% to 27% over 48 hrs — critical during tuber formation.', gpsCoords: '19.2184, 72.9781' },
+      3:  { status: 'Possible nutrient stress', soilMoisture: 45, temperature: 30, stressType: 'Possible potassium / nitrogen deficiency', confidence: 78, recommendedAction: 'Apply balanced NPK fertilizer. Potatoes are heavy potassium feeders.', aiExplanation: 'Mild interveinal chlorosis on lower leaves consistent with K deficiency.' },
+      27: { status: 'High Priority',            soilMoisture: 23, temperature: 33, stressType: 'Late Blight (Phytophthora infestans) — High Risk', confidence: 91, recommendedAction: 'Immediate fungicide application (Metalaxyl / Mancozeb) in Zone 27. Isolate perimeter.', aiExplanation: 'Dark water-soaked lesions on foliage detected by multispectral anomaly. Classic Late Blight signature.', gpsCoords: '19.2184, 72.9781' }
     })
   },
   {
     id: 'FIELD-B',
-    name: 'Field B (Tomato)',
+    name: 'Field B (Potato)',
     farmerName: 'Suresh Patil',
     location: 'Kalyan, Maharashtra',
-    crop: 'Tomato',
+    crop: 'Potato',
     areaHa: 6.2,
     sowingDate: '2026-07-01',
-    cropStage: 'Vegetative stage',
+    cropStage: 'Vegetative / Haulm growth stage',
     status: 'Attention Required',
     healthScore: 84,
     prevHealthScore: 85,
     lastScan: 'Today, 08:45 AM',
     moistureStatus: 'NORMAL',
-    activeAlerts: ['Possible Disease: Early Leaf Blight in Zone 2'],
+    activeAlerts: ['Zone 2: Early Blight (Alternaria solani) Detected'],
     sensors: fieldBSensors,
     zones: generateZones({
-      2: { status: 'Disease risk', soilMoisture: 45, stressType: 'Disease risk — Early Leaf Blight', confidence: 82, recommendedAction: 'Spray copper fungicide in Zone 2.', aiExplanation: 'Early signs of brown spots detected in tomato leaf photos.' }
+      2: { status: 'Disease risk', soilMoisture: 45, stressType: 'Early Blight — Alternaria solani lesions', confidence: 82, recommendedAction: 'Spray Chlorothalonil or Mancozeb fungicide across Zone 2.', aiExplanation: 'Concentric ringed brown lesions detected on older potato foliage — classic Early Blight pattern.' }
     })
   },
   {
     id: 'FIELD-C',
-    name: 'Field C (Wheat)',
+    name: 'Field C (Potato)',
     farmerName: 'Anil Deshmukh',
     location: 'Bhiwandi, Maharashtra',
-    crop: 'Wheat',
+    crop: 'Potato',
     areaHa: 3.5,
     sowingDate: '2026-08-10',
-    cropStage: 'Germination stage',
+    cropStage: 'Emergence / Early vegetative stage',
     status: 'Normal',
     healthScore: 91,
     prevHealthScore: 89,
@@ -181,17 +181,17 @@ export const MOCK_FIELDS: FieldAsset[] = [
   },
   {
     id: 'FIELD-D',
-    name: 'Field D (Soybean)',
+    name: 'Field D (Potato)',
     farmerName: 'Sunita Jadhav',
     location: 'Panvel, Maharashtra',
-    crop: 'Soybean',
+    crop: 'Potato',
     areaHa: 5.1,
     status: 'Attention Required',
     healthScore: 68,
     lastScan: '3 days ago',
-    activeAlerts: ['Suspected Pest Damage — Perimeter Zones'],
+    activeAlerts: ['Black Scurf (Rhizoctonia solani) Suspected — Perimeter Zones'],
     zones: generateZones({
-      8: { status: 'Warning', soilMoisture: 18, stressType: 'Water stress pattern', confidence: 86, recommendedAction: 'Verify irrigation channel flow.', gpsCoords: '19.1120, 73.0125' }
+      8: { status: 'Warning', soilMoisture: 18, stressType: 'Black Scurf / stem canker stress pattern', confidence: 86, recommendedAction: 'Verify irrigation, consider Thiabendazole soil drench in Zone 8.', gpsCoords: '19.1120, 73.0125' }
     })
   }
 ];
@@ -202,7 +202,7 @@ export const MOCK_OPERATIONS: DroneOperation[] = [
     id: 'OP-0142',
     requestId: 'REQ-1024',
     farmerName: 'Ramesh Kumar',
-    fieldName: 'Field A (Cotton)',
+    fieldName: 'Field A (Potato)',
     droneId: 'Drone-01',
     scanType: 'Crop Health Scan',
     operatorName: 'Rajesh Kumar',
@@ -229,7 +229,7 @@ export const MOCK_OPERATIONS: DroneOperation[] = [
     id: 'OP-0141',
     requestId: 'REQ-1025',
     farmerName: 'Suresh Patil',
-    fieldName: 'Field B (Tomato)',
+    fieldName: 'Field B (Potato)',
     droneId: 'Drone-02',
     scanType: 'Full Field Analysis',
     operatorName: 'Amit Patil',
@@ -256,7 +256,7 @@ export const MOCK_OPERATIONS: DroneOperation[] = [
     id: 'OP-0140',
     requestId: 'REQ-1026',
     farmerName: 'Anil Deshmukh',
-    fieldName: 'Field C (Wheat)',
+    fieldName: 'Field C (Potato)',
     droneId: 'Drone-03',
     scanType: 'Moisture/Soil Scan',
     operatorName: 'Amit Patil',
@@ -278,7 +278,7 @@ export const MOCK_OPERATIONS: DroneOperation[] = [
     id: 'OP-0139',
     requestId: 'REQ-1027',
     farmerName: 'Sunita Jadhav',
-    fieldName: 'Field D (Soybean)',
+    fieldName: 'Field D (Potato)',
     droneId: 'Drone-01',
     scanType: 'Crop Health Scan',
     operatorName: 'Pending Assignment',
@@ -298,10 +298,10 @@ export const MOCK_FINDINGS: CropFinding[] = [
   {
     id: 'FND-027',
     fieldId: 'FIELD-A',
-    fieldName: 'Field A (Cotton)',
+    fieldName: 'Field A (Potato)',
     zoneId: 'Zone 2',
     status: 'Pending Validation',
-    findingType: 'Low moisture / Water stress',
+    findingType: 'Potato tuber stress — Low moisture / Irrigation deficit',
     confidencePercent: 91,
     gpsCoords: '19.2184, 72.9781',
     timestamp: '10:42 AM',
@@ -322,10 +322,10 @@ export const MOCK_FINDINGS: CropFinding[] = [
   {
     id: 'FND-014',
     fieldId: 'FIELD-A',
-    fieldName: 'Field A (Cotton)',
+    fieldName: 'Field A (Potato)',
     zoneId: 'Zone 27',
     status: 'Pending Validation',
-    findingType: 'Visible crop stress / yellowing',
+    findingType: 'Late Blight (Phytophthora infestans) — Critical Risk',
     confidencePercent: 78,
     gpsCoords: '19.2200, 72.9789',
     timestamp: '10:38 AM',
@@ -346,10 +346,10 @@ export const MOCK_FINDINGS: CropFinding[] = [
   {
     id: 'FND-008',
     fieldId: 'FIELD-D',
-    fieldName: 'Field D (Soybean)',
+    fieldName: 'Field D (Potato)',
     zoneId: 'Zone 8',
     status: 'Pending Validation',
-    findingType: 'Water stress pattern',
+    findingType: 'Black Scurf (Rhizoctonia solani) — Suspected perimeter stress',
     confidencePercent: 86,
     gpsCoords: '19.1120, 73.0125',
     timestamp: '3 days ago',
@@ -376,15 +376,15 @@ export const MOCK_REPORTS: AssessmentReport[] = [
     requestId: 'REQ-1024',
     operationId: 'OP-0142',
     farmerName: 'Ramesh Kumar',
-    fieldName: 'Field A (Cotton)',
+    fieldName: 'Field A (Potato)',
     generatedDate: '2026-08-26 (Draft)',
     status: 'Draft',
     healthIndexScore: 78,
     priorityRecommendations: [
-      'Zone 2: Low soil moisture (27%) detected. Check irrigation channel flow immediately.',
-      'Zone 27: Visible crop stress detected (91% confidence). Prioritize soil inspection.',
-      'Schedule follow-up multispectral scan in 7 days to evaluate stress progression.',
-      'Maintain standard irrigation schedule for healthy southern quadrants.'
+      'Zone 2: Low soil moisture (27%) — Potato tuber stress risk. Increase irrigation immediately.',
+      'Zone 27: Late Blight (Phytophthora infestans) detected at 91% confidence. Apply Metalaxyl + Mancozeb immediately.',
+      'Schedule follow-up multispectral scan in 5 days to evaluate Late Blight progression.',
+      'Maintain standard irrigation schedule for healthy southern quadrants. Monitor for spread.'
     ]
   },
   {
@@ -392,13 +392,13 @@ export const MOCK_REPORTS: AssessmentReport[] = [
     requestId: 'REQ-1025',
     operationId: 'OP-0141',
     farmerName: 'Suresh Patil',
-    fieldName: 'Field B (Tomato)',
+    fieldName: 'Field B (Potato)',
     generatedDate: '2026-08-24',
     status: 'Ready',
     healthIndexScore: 84,
     priorityRecommendations: [
-      'Zone 2: Early Leaf Blight signs detected. Spray copper fungicide immediately.',
-      'Field health remains acceptable. No broad irrigation concerns at this stage.'
+      'Zone 2: Early Blight (Alternaria solani) detected. Spray Chlorothalonil fungicide immediately.',
+      'Potato canopy health remains acceptable. No broad irrigation concerns at this stage.'
     ]
   },
   {
@@ -406,13 +406,13 @@ export const MOCK_REPORTS: AssessmentReport[] = [
     requestId: 'REQ-1026',
     operationId: 'OP-0140',
     farmerName: 'Anil Deshmukh',
-    fieldName: 'Field C (Wheat)',
+    fieldName: 'Field C (Potato)',
     generatedDate: '2026-08-25',
     status: 'Sent',
     healthIndexScore: 91,
     priorityRecommendations: [
-      'Germination sprouting evenly distributed. Field health at 91/100.',
-      'Maintain standard irrigation cycle. No treatment required.'
+      'Potato emergence is uniform and healthy. Canopy NDVI at 0.72 — excellent early vegetative baseline.',
+      'Maintain standard irrigation cycle. No disease or stress treatment required.'
     ]
   }
 ];
@@ -427,116 +427,118 @@ export const MOCK_WEATHER: WeatherForecast[] = [
   { dayName: 'Mon',       date: '01 Sep', temperature: 32, rainProbability: 20, humidity: 68, windSpeed: 10, weatherCondition: 'Cloudy',  sprayingCondition: 'GOOD',     aiSummary: 'Overcast skies and pleasant winds offer comfortable application window.', bestWindow: '08:00 AM - 11:00 AM' }
 ];
 
-// ─── KNOWLEDGE LIBRARY ────────────────────────────────────────────────────────
+// ─── KNOWLEDGE LIBRARY (POTATO CROP FOCUS) ────────────────────────────────────
 export const MOCK_LIBRARY: LibraryItem[] = [
   {
-    id: 'crop_cotton',
+    id: 'crop_potato_jyoti',
     type: 'Crop',
-    name: 'Cotton',
-    description: 'Cotton is a soft, fluffy staple fiber that grows in a boll around the seeds of Gossypium plants. It is one of the major cash crops of Maharashtra.',
+    name: 'Potato (Kufri Jyoti)',
+    description: 'Kufri Jyoti is the dominant high-yielding table potato variety cultivated across Maharashtra (Ambegaon/Pune & Satara belts). Resilient with wide adaptability.',
     details: [
-      'Optimal Temperature: 21°C to 30°C',
-      'Sowing Period: May – June',
-      'Irrigation Requirement: Moderate (sensitive to waterlogging)',
-      'Fertilization: High N and K requirements during flowering stage',
-      'Growth Stages: Germination → Vegetative → Squaring → Flowering → Boll Development → Harvest'
+      'Optimal Temperature: 15°C to 24°C (tuber initiation slows above 26°C)',
+      'Sowing Period: Oct – Nov (Rabi) / Jun – Jul (Kharif)',
+      'Tuber Duration: 90 – 100 days to maturity',
+      'Irrigation Requirement: Critical during tuber initiation and bulking — target 35–65% soil moisture',
+      'Yield Potential: 250 – 300 q/ha with recommended NPK fertility'
     ],
-    symptoms: 'Leaf curl, yellowing, boll rot, red leaf discoloration.',
-    prevention: 'Maintain soil moisture above 35%. Avoid waterlogging.',
-    management: 'Regular scouting; apply Imidacloprid for sucking pests.',
-    affectedCrops: ['Cotton']
+    symptoms: 'Foliar dark lesions under Late Blight pressure, leaf yellowing under potassium deficit.',
+    prevention: 'Maintain soil moisture above 35%. Use certified disease-free seed tubers.',
+    management: 'Regular multispectral scouting; apply Metalaxyl + Mancozeb for Late Blight.',
+    affectedCrops: ['Potato']
   },
   {
-    id: 'crop_tomato',
+    id: 'crop_potato_pukhraj',
     type: 'Crop',
-    name: 'Tomato',
-    description: 'Tomatoes are warm-season crops that require ample sunlight and well-draining organic soil to flourish.',
+    name: 'Potato (Kufri Pukhraj)',
+    description: 'Kufri Pukhraj is an early-maturing, high-yielding potato variety with large yellow oval tubers and smooth skin. Excellent early harvest window.',
     details: [
-      'Optimal Temperature: 18°C to 27°C',
-      'Sowing Period: June – July / Nov – Dec',
-      'Irrigation: Drip irrigation preferred — avoid foliar wetting',
-      'Growth Stages: Seedling → Vegetative → Flowering → Fruit set → Ripening'
+      'Optimal Temperature: 18°C to 26°C',
+      'Sowing Period: September – October',
+      'Tuber Duration: 70 – 80 days (early maturing)',
+      'Irrigation: Requires uniform light irrigation during early bulking',
+      'Yield Potential: 300 – 350 q/ha'
     ],
-    symptoms: 'Brown spots, curled leaves, wilting, fruit blossom end rot.',
-    prevention: 'Avoid overhead irrigation. Space plants adequately.',
-    management: 'Apply copper fungicide for Early Blight. Remove infected leaves.',
-    affectedCrops: ['Tomato']
+    symptoms: 'Susceptible to Late Blight under damp cool weather.',
+    prevention: 'Avoid excessive nitrogen fertilization. Space hills at 60cm x 20cm.',
+    management: 'Preventive Mancozeb 2.5 g/l spray prior to canopy closure.',
+    affectedCrops: ['Potato']
   },
   {
-    id: 'crop_wheat',
+    id: 'crop_potato_bahar',
     type: 'Crop',
-    name: 'Wheat',
-    description: 'Wheat (Triticum aestivum) is a cereal grain and the most widely cultivated food crop globally. Rabi season crop in India.',
+    name: 'Potato (Kufri Bahar)',
+    description: 'Kufri Bahar is a medium-duration potato variety producing large round white tubers with pale yellow flesh. Popular in commercial potato farming.',
     details: [
-      'Optimal Temperature: 15°C to 25°C',
-      'Sowing Period: October – November (Rabi)',
-      'Water Requirement: 450–650 mm across growth cycle',
-      'Growth Stages: Germination → Tillering → Stem Elongation → Heading → Grain Filling → Harvest'
+      'Optimal Temperature: 16°C to 25°C',
+      'Sowing Period: October – November',
+      'Tuber Duration: 100 – 110 days',
+      'Soil: Well-drained sandy loam rich in organic matter',
+      'Yield Potential: 280 – 320 q/ha'
     ],
-    symptoms: 'Rust pustules, powdery mildew, root rot.',
-    prevention: 'Use certified seed. Balanced N:P:K application.',
-    management: 'Propiconazole for leaf rust. Mancozeb for powdery mildew.',
-    affectedCrops: ['Wheat']
+    symptoms: 'Early leaf spots under Alternaria solani pressure.',
+    prevention: 'Maintain adequate soil potassium and avoid moisture stress during tuberization.',
+    management: 'Spray Chlorothalonil @ 2 g/l for Early Blight prevention.',
+    affectedCrops: ['Potato']
   },
   {
-    id: 'pest_bollworm',
-    type: 'Pest',
-    name: 'Bollworm (Pink & American)',
-    description: 'Major lepidopteran pests that attack cotton bolls, feeding on seeds and fiber, causing direct yield loss.',
-    details: [
-      'Pink bollworm: Pectinophora gossypiella',
-      'American bollworm: Helicoverpa armigera',
-      'Peak season: July – September during cotton flowering'
-    ],
-    symptoms: 'Entry holes in bolls, rosette flowers, caterpillar frass inside bolls.',
-    prevention: 'Pheromone traps at 5/ha. Plant Bt cotton varieties.',
-    management: 'Emamectin benzoate 5 SG @ 0.4 g/l. Avoid pyrethroid overuse.',
-    affectedCrops: ['Cotton']
-  },
-  {
-    id: 'pest_aphids',
-    type: 'Pest',
-    name: 'Aphids (Cotton & Tomato)',
-    description: 'Soft-bodied sucking insects that cluster on new growth and undersides of leaves, transmitting viral diseases.',
-    details: [
-      'Cotton aphid: Aphis gossypii',
-      'Tomato aphid: Macrosiphum euphorbiae',
-      'Can cause 30–40% yield loss if uncontrolled'
-    ],
-    symptoms: 'Curled, yellowing leaves; honeydew deposition; sooty mold growth.',
-    prevention: 'Encourage natural predators (ladybird beetles). Avoid excessive nitrogen.',
-    management: 'Imidacloprid 0.5 ml/l or Dimethoate 1.5 ml/l spray.',
-    affectedCrops: ['Cotton', 'Tomato']
-  },
-  {
-    id: 'disease_leaf_blight',
+    id: 'disease_late_blight',
     type: 'Disease',
-    name: 'Early Leaf Blight (Tomato)',
-    description: 'Fungal disease caused by Alternaria solani causing circular brown lesions with concentric rings on leaves.',
+    name: 'Potato Late Blight (Phytophthora infestans)',
+    description: 'The most destructive potato disease worldwide. Oomycete pathogen causing rapid dark water-soaked lesions on foliage and tuber rot.',
+    details: [
+      'Pathogen: Phytophthora infestans',
+      'Favored by: High relative humidity (>90%) and cool temperatures (15–22°C)',
+      'Can destroy an entire potato crop canopy within 7–10 days if unmanaged'
+    ],
+    symptoms: 'Water-soaked dark lesions on leaf tips and margins, white mildew growth on underside in humid conditions, tuber brown rot.',
+    prevention: 'Crop rotation. Plant certified resistant varieties (e.g. Kufri Jyoti). Avoid high canopy humidity.',
+    management: 'Immediate preventive/curative spray of Metalaxyl-M + Mancozeb (2.5 g/l) or Cymoxanil at first detection.',
+    affectedCrops: ['Potato']
+  },
+  {
+    id: 'disease_early_blight',
+    type: 'Disease',
+    name: 'Potato Early Blight (Alternaria solani)',
+    description: 'Common fungal pathogen affecting older potato foliage, creating distinctive target-board concentric ring brown spots.',
     details: [
       'Pathogen: Alternaria solani',
-      'Favored by: Warm humid conditions (25–30°C, 80%+ RH)',
-      'Spreads via infected soil, plant debris, water splash'
+      'Favored by: Alternating wet and dry weather, temperature 24–30°C',
+      'Causes premature defoliation and tuber size reduction'
     ],
-    symptoms: 'Circular brown spots with yellow halos and concentric ring patterns on lower leaves.',
-    prevention: 'Crop rotation. Avoid overhead irrigation. Use resistant varieties.',
-    management: 'Copper oxychloride @ 3 g/l or Mancozeb 2.5 g/l spray at 10-day intervals.',
-    affectedCrops: ['Tomato']
+    symptoms: 'Small dark brown/black spots with yellow halo and target-like concentric rings on lower mature potato leaves.',
+    prevention: 'Maintain adequate nitrogen and potassium fertility. Avoid plant water stress.',
+    management: 'Apply Chlorothalonil @ 2 g/l or Mancozeb 2.5 g/l spray at 10-day intervals.',
+    affectedCrops: ['Potato']
   },
   {
-    id: 'disease_powdery_mildew',
-    type: 'Disease',
-    name: 'Powdery Mildew',
-    description: 'Fungal disease creating white powdery coating on leaf surfaces, reducing photosynthesis and yield.',
+    id: 'pest_potato_aphids',
+    type: 'Pest',
+    name: 'Potato Aphids (Myzus persicae)',
+    description: 'Green peach aphids and potato aphids that suck sap from new potato foliage and act as vectors for Potato Virus Y (PVY) and PLRV.',
     details: [
-      'Pathogens: Erysiphe and Leveillula species',
-      'Favored by: High humidity with dry conditions, 20–27°C',
-      'Common on cotton, wheat, and cucurbits'
+      'Species: Myzus persicae / Macrosiphum euphorbiae',
+      'Vector of major potato viral degeneration diseases',
+      'Peak activity: Nov – Jan in Maharashtra Rabi crop'
     ],
-    symptoms: 'White or gray powdery patches on upper leaf surfaces.',
-    prevention: 'Balanced fertilization. Avoid dense canopies.',
-    management: 'Sulphur 80 WP @ 2.5 g/l or Propiconazole 1 ml/l spray.',
-    affectedCrops: ['Cotton', 'Wheat']
+    symptoms: 'Curled leaves, sticky honeydew, stunted growth, transmission of leafroll virus.',
+    prevention: 'Yellow sticky traps at 20/ha. Use aphid-free certified seed potatoes.',
+    management: 'Foliar spray of Imidacloprid 17.8 SL @ 0.3 ml/l or Thiamethoxam 25 WG @ 0.2 g/l.',
+    affectedCrops: ['Potato']
+  },
+  {
+    id: 'disease_black_scurf',
+    type: 'Disease',
+    name: 'Black Scurf & Rhizoctonia Stem Canker',
+    description: 'Soil-borne fungal disease causing black sclerotia on potato tuber skins and sunken brown cankers on subterranean stolons.',
+    details: [
+      'Pathogen: Rhizoctonia solani',
+      'Favored by: Cold damp soils during emergence',
+      'Reduces tuber marketability and sprout vigor'
+    ],
+    symptoms: 'Black dirt-like sclerotia on tubers that do not wash off; aerial tubers; stem cankers.',
+    prevention: 'Plant in warm, dry seedbeds. Tuber seed treatment with Trichoderma viride.',
+    management: 'Seed tuber treatment with Azoxystrobin or Thiabendazole prior to planting.',
+    affectedCrops: ['Potato']
   }
 ];
 
@@ -545,32 +547,32 @@ export const MOCK_ACTIONS: ActionEntry[] = [
   {
     id: 'action_p1',
     fieldId: 'FIELD-B',
-    title: 'Checked Disease Boundary',
+    title: 'Checked Potato Disease Boundary',
     category: 'Pest',
     zoneName: 'Zone 2',
     date: '2026-08-25',
-    notes: 'Manually inspected tomato leaf spots. Copper fungicide scheduled.',
+    notes: 'Manually inspected potato leaf lesions. Chlorothalonil fungicide scheduled.',
     isCompleted: true
   },
   {
     id: 'action_p2',
     fieldId: 'FIELD-A',
-    title: 'Nitrogen Applicator',
+    title: 'Potassium / NPK Applicator',
     category: 'Nutrient',
     zoneName: 'Zone 3',
     date: '2026-08-22',
-    notes: 'Hand spread urea mixture to counter discoloration.',
+    notes: 'Hand spread K2O mixture to support potato tuber bulking.',
     isCompleted: true
   }
 ];
 
 // ─── ACTIVITY LOG ─────────────────────────────────────────────────────────────
 export const MOCK_ACTIVITIES: ActivityItem[] = [
-  { id: 'ACT-110', timestamp: '11:20 AM', title: 'Action synced', description: 'Nitrogen applicator action on Field A Zone 3 logged by operator.', category: 'action' },
-  { id: 'ACT-106', timestamp: '11:10 AM', title: 'Draft report generated', description: 'Draft field intelligence report REP-904 generated for Field A (Cotton).', category: 'report' },
-  { id: 'ACT-105', timestamp: '11:03 AM', title: 'Finding FND-027 logged', description: 'AI detection pipeline flagged low moisture / water stress in Zone 2 (91% confidence).', category: 'validation' },
-  { id: 'ACT-104', timestamp: '10:55 AM', title: 'Validation queue updated', description: '2 findings sent to operator validation queue for Field A.', category: 'validation' },
-  { id: 'ACT-103', timestamp: '10:50 AM', title: 'Processing completed', description: 'Multispectral imagery stitched and calibrated for OP-0142.', category: 'operation' },
-  { id: 'ACT-102', timestamp: '10:15 AM', title: 'Operation OP-0142 started', description: 'Drone-01 (Rajesh Kumar) launched mission OP-0142 over Field A (Thane).', category: 'operation' },
-  { id: 'ACT-101', timestamp: '09:15 AM', title: 'Request REQ-1024 accepted', description: 'Operator accepted scan request from farmer Ramesh Kumar.', category: 'request' }
+  { id: 'ACT-110', timestamp: '11:20 AM', title: 'Action synced', description: 'NPK applicator action on Field A (Potato) Zone 3 logged by operator.', category: 'action' },
+  { id: 'ACT-106', timestamp: '11:10 AM', title: 'Draft report generated', description: 'Draft field intelligence report REP-904 generated for Field A (Potato).', category: 'report' },
+  { id: 'ACT-105', timestamp: '11:03 AM', title: 'Finding FND-027 logged', description: 'AI detection pipeline flagged low moisture / tuber stress in Zone 2 (91% confidence).', category: 'validation' },
+  { id: 'ACT-104', timestamp: '10:55 AM', title: 'Validation queue updated', description: '2 findings sent to operator validation queue for Field A (Potato).', category: 'validation' },
+  { id: 'ACT-103', timestamp: '10:50 AM', title: 'Processing completed', description: 'Multispectral imagery stitched and calibrated for OP-0142 (Potato Field A).', category: 'operation' },
+  { id: 'ACT-102', timestamp: '10:15 AM', title: 'Operation OP-0142 started', description: 'Drone-01 launched mission OP-0142 over Potato Field A (Ambegaon).', category: 'operation' },
+  { id: 'ACT-101', timestamp: '09:15 AM', title: 'Request REQ-1024 accepted', description: 'Accepted scan request for Potato Field A from farmer Ramesh Kumar.', category: 'request' }
 ];

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ZoneData } from '../../types';
 import * as turf from '@turf/turf';
+
+// Leaflet CSS must be injected globally — we do it here via a style tag approach
+// to avoid Vite asset resolution issues
+const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
 interface MapLibreSpatialMapProps {
   zones: ZoneData[];
@@ -10,417 +14,321 @@ interface MapLibreSpatialMapProps {
   height?: string;
 }
 
+// Ambegaon Potato Farm coordinates — Shifted North onto green crop field parcel
+const FARM_LAT = 19.0542;
+const FARM_LNG = 73.8820;
+
+const FIELD_BOUNDARY: [number, number][] = [
+  [19.0536, 73.8810],
+  [19.0538, 73.8832],
+  [19.0550, 73.8830],
+  [19.0548, 73.8808],
+  [19.0536, 73.8810],
+];
+
+const FLIGHT_PATH: [number, number][] = [
+  [19.0537, 73.8811],
+  [19.0540, 73.8816],
+  [19.0544, 73.8822],
+  [19.0548, 73.8828],
+];
+
 export const MapLibreSpatialMap: React.FC<MapLibreSpatialMapProps> = ({
-  zones,
-  selectedZoneId,
-  onSelectZone,
   showFlightPath = true,
   height = '440px'
 }) => {
-  const [activeLayer, setActiveLayer] = useState<'multispectral' | 'satellite' | 'vector'>('multispectral');
-  const [zoom, setZoom] = useState<number>(1);
-  const [hoveredZone, setHoveredZone] = useState<ZoneData | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<import('leaflet').Map | null>(null);
+  const baseTileRef = useRef<import('leaflet').TileLayer | null>(null);
+  const [activeLayer, setActiveLayer] = useState<'satellite' | 'ndvi' | 'streets'>('satellite');
+  const [cssLoaded, setCssLoaded] = useState(false);
 
-  // Turf.js Geographic Calculation for Field Boundary Polygon
-  const fieldPolygon = turf.polygon([
-    [
-      [72.9770, 19.2180],
-      [72.9800, 19.2182],
-      [72.9795, 19.2210],
-      [72.9765, 19.2205],
-      [72.9770, 19.2180]
-    ]
-  ]);
+  // Inject Leaflet CSS once
+  useEffect(() => {
+    if (document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      setCssLoaded(true);
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS;
+    link.onload = () => setCssLoaded(true);
+    document.head.appendChild(link);
+  }, []);
 
-  const fieldAreaSqM = turf.area(fieldPolygon);
-  const fieldAreaHa = (fieldAreaSqM / 10000).toFixed(2); // 4.80 ha
-  const fieldCentroid = turf.centroid(fieldPolygon);
-  const centroidCoords = fieldCentroid.geometry.coordinates;
+  // Turf.js calculations for farm field boundary
+  const turfPolygon = turf.polygon([[
+    [73.8810, 19.0536],
+    [73.8832, 19.0538],
+    [73.8830, 19.0550],
+    [73.8808, 19.0548],
+    [73.8810, 19.0536],
+  ]]);
+  const fieldAreaHa = (turf.area(turfPolygon) / 10000).toFixed(2);
+  const centroid = turf.centroid(turfPolygon).geometry.coordinates;
 
-  // Turf.js distance calculation from Drone-01 to Zone 27
-  const dronePoint = turf.point([72.9785, 19.2190]);
-  const zone27Point = turf.point([72.9781, 19.2184]);
-  const distanceKm = turf.distance(dronePoint, zone27Point);
-  const distanceMeters = Math.round(distanceKm * 1000);
+  // Initialize map after CSS loaded
+  useEffect(() => {
+    if (!cssLoaded) return;
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
+
+    import('leaflet').then((L) => {
+      // Fix Leaflet marker icon paths (Vite bundler issue)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+
+      const map = L.map(mapContainerRef.current!, {
+        center: [FARM_LAT, FARM_LNG],
+        zoom: 16,
+        zoomControl: false, // we'll position it manually
+        attributionControl: false,
+      });
+
+      // Add zoom control to bottom-right
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Google Satellite tile layer with maxNativeZoom to prevent missing tile errors
+      const googleSat = L.tileLayer(
+        'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        {
+          attribution: 'Satellite © Google / Esri Maxar',
+          maxZoom: 19,
+          maxNativeZoom: 17,
+          tileSize: 256,
+        }
+      );
+      googleSat.addTo(map);
+      baseTileRef.current = googleSat;
+
+      // --- Field Boundary Polygon ---
+      L.polygon(FIELD_BOUNDARY, {
+        color: '#00E5FF',
+        weight: 2.5,
+        fillColor: '#00E5FF',
+        fillOpacity: 0.06,
+        dashArray: '8 5',
+      })
+        .addTo(map)
+        .bindTooltip(
+          `<div style="font-family:monospace;font-size:12px">
+            <b>Field A — Potato (Solanum tuberosum)</b><br/>
+            Area: ${fieldAreaHa} ha &nbsp;|&nbsp; ${centroid[1].toFixed(4)}°N, ${centroid[0].toFixed(4)}°E<br/>
+            Stage: Tuber Bulking &nbsp;|&nbsp; Ambegaon, Pune District
+          </div>`,
+          { sticky: true, className: 'agri-field-tip' }
+        );
+
+      // --- Drone Marker ---
+      if (showFlightPath) {
+        const droneIcon = L.divIcon({
+          className: '',
+          html: `<div class="agri-drone-marker">
+            <div class="agri-drone-ring"></div>
+            <div class="agri-drone-icon">✈</div>
+          </div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+        });
+
+        L.marker([FARM_LAT, FARM_LNG], { icon: droneIcon })
+          .addTo(map)
+          .bindPopup(
+            `<div style="font-family:monospace;line-height:1.6">
+              <b style="color:#42A5F5">Drone-01 — AgriSwarm</b><br/>
+              Altitude: 45 m &nbsp;|&nbsp; Speed: 4.2 m/s<br/>
+              Battery: 62% &nbsp;|&nbsp; Stage: Active Scan<br/>
+              Scanning: Field A (Potato) — Zone 27
+            </div>`,
+            { maxWidth: 240 }
+          );
+
+        // Flight path
+        L.polyline(FLIGHT_PATH, {
+          color: '#42A5F5',
+          weight: 2.5,
+          dashArray: '6 5',
+          opacity: 0.85,
+        }).addTo(map);
+      }
+
+      mapInstanceRef.current = map;
+    });
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cssLoaded]);
+
+  // Handle layer switching
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    import('leaflet').then((L) => {
+      if (baseTileRef.current) map.removeLayer(baseTileRef.current);
+
+      const urls: Record<string, { url: string; attr: string }> = {
+        satellite: {
+          url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          attr: 'Satellite © Google / Esri Maxar',
+        },
+        ndvi: {
+          url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          attr: 'Satellite © Google | NDVI false-color overlay',
+        },
+        streets: {
+          url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          attr: 'Map Data © Google',
+        },
+      };
+
+      const chosen = urls[activeLayer];
+      const newTile = L.tileLayer(chosen.url, {
+        attribution: chosen.attr,
+        maxZoom: 19,
+        maxNativeZoom: 17,
+        tileSize: 256,
+      });
+      newTile.addTo(map);
+      baseTileRef.current = newTile;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLayer]);
 
   return (
-    <div 
-      style={{
-        position: 'relative',
-        width: '100%',
-        height,
-        backgroundColor: activeLayer === 'vector' ? '#FAFBF7' : '#141D12',
-        borderRadius: '6px',
-        border: '1px solid #C8CAC0',
-        overflow: 'hidden',
-        userSelect: 'none',
-        boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.2)'
-      }}
-    >
-      {/* Map Header Overlay Toolbar */}
-      <div 
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          right: 10,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 20
-        }}
-      >
-        {/* Layer Switcher Pill */}
-        <div 
-          style={{
-            display: 'flex',
-            gap: '2px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '3px',
-            borderRadius: '5px',
-            border: '1px solid #DDDED7',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-          }}
-        >
-          <button
-            onClick={() => setActiveLayer('multispectral')}
-            style={{
-              padding: '4px 9px',
-              fontSize: '11px',
-              fontWeight: 600,
-              borderRadius: '4px',
-              backgroundColor: activeLayer === 'multispectral' ? '#30432E' : 'transparent',
-              color: activeLayer === 'multispectral' ? '#FFFFFF' : '#5F645D',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            NDVI Multispectral
-          </button>
-          <button
-            onClick={() => setActiveLayer('satellite')}
-            style={{
-              padding: '4px 9px',
-              fontSize: '11px',
-              fontWeight: 600,
-              borderRadius: '4px',
-              backgroundColor: activeLayer === 'satellite' ? '#30432E' : 'transparent',
-              color: activeLayer === 'satellite' ? '#FFFFFF' : '#5F645D',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Satellite TrueColor
-          </button>
-          <button
-            onClick={() => setActiveLayer('vector')}
-            style={{
-              padding: '4px 9px',
-              fontSize: '11px',
-              fontWeight: 600,
-              borderRadius: '4px',
-              backgroundColor: activeLayer === 'vector' ? '#30432E' : 'transparent',
-              color: activeLayer === 'vector' ? '#FFFFFF' : '#5F645D',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            GIS Vector Grid
-          </button>
-        </div>
+    <div style={{ position: 'relative', width: '100%', height, borderRadius: '8px', border: '1px solid #B0B3AC', overflow: 'hidden' }}>
 
-        {/* Turf.js Telemetry Badge */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div 
-            style={{
-              fontSize: '11px',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              padding: '4px 10px',
-              borderRadius: '4px',
-              border: '1px solid #DDDED7',
-              color: '#1C201A',
-              fontWeight: 600,
-              fontFamily: 'monospace',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
-            }}
-          >
-            Turf.js: {fieldAreaHa} ha · Centroid: {centroidCoords[1].toFixed(4)}°N, {centroidCoords[0].toFixed(4)}°E
-          </div>
-
-          <div style={{ display: 'flex', gap: '3px' }}>
-            <button
-              onClick={() => setZoom(prev => Math.min(prev + 0.15, 1.4))}
-              style={{ width: 28, height: 28, backgroundColor: '#FFFFFF', border: '1px solid #DDDED7', borderRadius: '4px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
-              title="Zoom In"
-            >
-              +
-            </button>
-            <button
-              onClick={() => setZoom(prev => Math.max(prev - 0.15, 0.85))}
-              style={{ width: 28, height: 28, backgroundColor: '#FFFFFF', border: '1px solid #DDDED7', borderRadius: '4px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
-              title="Zoom Out"
-            >
-              -
-            </button>
-          </div>
-        </div>
+      {/* Layer Toggle Bar */}
+      <div style={{
+        position: 'absolute', top: 12, left: 12, zIndex: 999,
+        display: 'flex', gap: '2px',
+        background: 'rgba(15,20,15,0.82)', backdropFilter: 'blur(8px)',
+        padding: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.12)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      }}>
+        {(['satellite', 'ndvi', 'streets'] as const).map((layer) => (
+          <button key={layer} onClick={() => setActiveLayer(layer)} style={{
+            padding: '4px 11px', fontSize: '11px', fontWeight: 700,
+            borderRadius: '4px', border: 'none', cursor: 'pointer',
+            background: activeLayer === layer ? '#30432E' : 'transparent',
+            color: activeLayer === layer ? '#A8D5A2' : 'rgba(255,255,255,0.6)',
+            transition: 'all 0.15s',
+            textTransform: 'uppercase', letterSpacing: '0.5px',
+          }}>
+            {layer === 'satellite' ? '🛰 Satellite' : layer === 'ndvi' ? '🌿 NDVI' : '🗺 Streets'}
+          </button>
+        ))}
       </div>
 
-      {/* High-Precision GIS SVG Map Canvas */}
-      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-        <svg
-          viewBox="0 0 600 440"
-          style={{
-            width: '100%',
-            height: '100%',
-            transform: `scale(${zoom})`,
-            transformOrigin: 'center center',
-            transition: 'transform 0.15s ease-out'
-          }}
-        >
-          <defs>
-            {/* Real NDVI Heatmap Gradient (Green -> Amber -> Red Anomaly) */}
-            <linearGradient id="ndviGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#30432E" stopOpacity="0.8" />
-              <stop offset="45%" stopColor="#4F6848" stopOpacity="0.75" />
-              <stop offset="70%" stopColor="#B8862D" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#B64A43" stopOpacity="0.9" />
-            </linearGradient>
-
-            {/* Satellite Crop Foliage Texture */}
-            <pattern id="cropRowsPattern" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
-              <line x1="0" y1="0" x2="0" y2="20" stroke={activeLayer === 'multispectral' ? '#263624' : '#2F3F2D'} strokeWidth="4" />
-              <line x1="10" y1="0" x2="10" y2="20" stroke={activeLayer === 'multispectral' ? '#1D2A1C' : '#243222'} strokeWidth="3" />
-            </pattern>
-
-            {/* Drone Scan Radar Pulse */}
-            <radialGradient id="radarPulse">
-              <stop offset="0%" stopColor="rgba(85, 117, 138, 0.6)" />
-              <stop offset="100%" stopColor="rgba(85, 117, 138, 0.0)" />
-            </radialGradient>
-          </defs>
-
-          {/* Map Base Canvas */}
-          <rect width="600" height="440" fill={activeLayer === 'vector' ? '#FAFBF7' : '#141D12'} />
-
-          {/* Satellite Terrain Texture */}
-          {activeLayer !== 'vector' && (
-            <rect width="600" height="440" fill="url(#cropRowsPattern)" opacity="0.6" />
-          )}
-
-          {/* Topographic Contour Lines */}
-          {activeLayer !== 'vector' && (
-            <g opacity="0.15" stroke="#FFFFFF" strokeWidth="0.75" fill="none">
-              <path d="M 20,60 Q 180,100 340,60 T 580,90" />
-              <path d="M 20,180 Q 160,140 360,200 T 580,160" />
-              <path d="M 20,300 Q 220,340 420,280 T 580,320" />
-            </g>
-          )}
-
-          {/* Geographic Field Boundary Polygon */}
-          <polygon
-            points="60,40 540,50 525,400 70,390"
-            fill={activeLayer === 'multispectral' ? 'url(#ndviGrad)' : activeLayer === 'satellite' ? '#222E20' : 'rgba(79, 104, 72, 0.12)'}
-            stroke="#4F6848"
-            strokeWidth={activeLayer === 'vector' ? '2' : '3'}
-          />
-
-          {/* 6x6 Grid of Geographic Zones */}
-          {zones.map((zone) => {
-            const colIdx = zone.gridCol - 1;
-            const rowIdx = zone.gridRow - 1;
-            const cellW = 480 / 6;
-            const cellH = 350 / 6;
-            const x = 60 + colIdx * cellW;
-            const y = 40 + rowIdx * cellH;
-
-            const isSelected = zone.id === selectedZoneId;
-            const isHovered = hoveredZone?.id === zone.id;
-
-            return (
-              <g
-                key={zone.id}
-                onClick={() => onSelectZone && onSelectZone(zone)}
-                onMouseEnter={() => setHoveredZone(zone)}
-                onMouseLeave={() => setHoveredZone(null)}
-                style={{ cursor: 'pointer' }}
-              >
-                <rect
-                  x={x + 2}
-                  y={y + 2}
-                  width={cellW - 4}
-                  height={cellH - 4}
-                  fill={
-                    zone.status === 'High Priority' ? 'rgba(182, 74, 67, 0.55)' :
-                    zone.status === 'Warning' ? 'rgba(184, 134, 45, 0.4)' :
-                    activeLayer === 'vector' ? '#F4F7F2' : 'rgba(79, 104, 72, 0.15)'
-                  }
-                  stroke={
-                    isSelected ? '#FFFFFF' :
-                    zone.status === 'High Priority' ? '#B64A43' :
-                    zone.status === 'Warning' ? '#B8862D' :
-                    activeLayer === 'vector' ? '#D8D9D2' : 'rgba(255,255,255,0.2)'
-                  }
-                  strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
-                  rx={3}
-                />
-
-                <text
-                  x={x + 7}
-                  y={y + 16}
-                  fontSize="10"
-                  fontFamily="JetBrains Mono, monospace"
-                  fontWeight={isSelected || isHovered ? 'bold' : '500'}
-                  fill={activeLayer !== 'vector' ? '#FFFFFF' : '#1C201A'}
-                  opacity={0.9}
-                >
-                  {zone.zoneNumber < 10 ? `0${zone.zoneNumber}` : zone.zoneNumber}
-                </text>
-
-                {/* Soil Moisture % Tag */}
-                <text
-                  x={x + cellW - 24}
-                  y={y + cellH - 7}
-                  fontSize="8"
-                  fontFamily="JetBrains Mono, monospace"
-                  fill={activeLayer !== 'vector' ? '#D8D9D2' : '#5F645D'}
-                  opacity={0.8}
-                >
-                  {zone.soilMoisture}%
-                </text>
-
-                {/* Animated Pulsing Anomaly Icon on Zone 27 */}
-                {zone.status === 'High Priority' && (
-                  <g transform={`translate(${x + cellW / 2}, ${y + cellH / 2})`}>
-                    <circle r="14" fill="none" stroke="#B64A43" strokeWidth="1.5" opacity="0.7">
-                      <animate attributeName="r" values="8;18;8" dur="1.8s" repeatCount="indefinite" />
-                      <animate attributeName="opacity" values="0.9;0.1;0.9" dur="1.8s" repeatCount="indefinite" />
-                    </circle>
-                    <circle r="5" fill="#B64A43" stroke="#FFFFFF" strokeWidth="1.5" />
-                  </g>
-                )}
-              </g>
-            );
-          })}
-
-          {/* Real-Time Drone Flight Path Vector */}
-          {showFlightPath && (
-            <g>
-              {/* Drone Radar Sweep Circle */}
-              <circle cx="300" cy="300" r="45" fill="url(#radarPulse)" />
-
-              {/* Waypoint Path Line */}
-              <polyline
-                points="60,40 140,40 140,390 220,390 220,40 300,40 300,300"
-                fill="none"
-                stroke="#55758A"
-                strokeWidth="1.8"
-                strokeDasharray="4 4"
-              />
-
-              {/* Drone Position Marker */}
-              <g transform="translate(300, 300)">
-                <circle r="12" fill="rgba(85, 117, 138, 0.25)" stroke="#55758A" strokeWidth="1.5" />
-                <polygon points="0,-7 6,5 -6,5" fill="#55758A" />
-                <rect x="12" y="-10" width="130" height="20" rx="3" fill="rgba(28, 32, 26, 0.88)" stroke="#55758A" strokeWidth="0.8" />
-                <text x="17" y="3" fontSize="9" fontWeight="bold" fontFamily="JetBrains Mono, monospace" fill="#FFFFFF">
-                  Drone-01 · {distanceMeters}m to Zone 27
-                </text>
-              </g>
-            </g>
-          )}
-
-          {/* Lat/Long Grid Ticks */}
-          <g fontSize="8" fontFamily="monospace" fill={activeLayer !== 'vector' ? '#8A9087' : '#5F645D'}>
-            <text x="70" y="35">19.2205°N</text>
-            <text x="500" y="35">19.2210°N</text>
-            <text x="70" y="415">72.9765°E</text>
-            <text x="500" y="415">72.9800°E</text>
-          </g>
-        </svg>
+      {/* Turf.js Stats Badge */}
+      <div style={{
+        position: 'absolute', top: 12, right: 12, zIndex: 999,
+        background: 'rgba(15,20,15,0.82)', backdropFilter: 'blur(8px)',
+        padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.12)',
+        fontSize: '11px', fontFamily: 'monospace', fontWeight: 600, color: '#A8D5A2',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        lineHeight: 1.5,
+      }}>
+        <div>📐 {fieldAreaHa} ha &nbsp;|&nbsp; Turf.js Calculated</div>
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '10px' }}>{centroid[1].toFixed(4)}°N · {centroid[0].toFixed(4)}°E · Ambegaon</div>
       </div>
 
-      {/* Live Coordinate Tooltip on Hover */}
-      {hoveredZone && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: 50,
-            left: 12,
-            backgroundColor: 'rgba(28, 32, 26, 0.92)',
-            color: '#FFFFFF',
-            padding: '6px 10px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            zIndex: 30,
-            pointerEvents: 'none',
-            fontFamily: 'monospace',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}
-        >
-          <div><strong>{hoveredZone.id}</strong> (Row {hoveredZone.gridRow}, Col {hoveredZone.gridCol})</div>
-          <div>Status: {hoveredZone.status} · Moisture: {hoveredZone.soilMoisture}%</div>
-          <div>GPS: {hoveredZone.gpsCoords}</div>
-        </div>
+      {/* NDVI false-color overlay */}
+      {activeLayer === 'ndvi' && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 400, pointerEvents: 'none',
+          background: 'linear-gradient(135deg, rgba(30,60,20,0.5) 0%, rgba(180,130,30,0.4) 65%, rgba(180,60,50,0.55) 100%)',
+        }} />
       )}
 
-      {/* GIS Legend & Scale Overlay Bar */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 10,
-          left: 10,
-          right: 10,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 20
-        }}
-      >
-        {/* Scale Bar */}
-        <div 
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            border: '1px solid #DDDED7',
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: '#1C201A',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <span style={{ display: 'inline-block', width: '30px', height: '3px', backgroundColor: '#1C201A' }} />
-          <span>100m</span>
-        </div>
-
-        {/* NDVI Color Scale */}
-        <div
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '4px 10px',
-            borderRadius: '4px',
-            border: '1px solid #DDDED7',
-            display: 'flex',
-            gap: 12,
-            fontSize: '10px',
-            color: '#1C201A',
-            alignItems: 'center'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#30432E' }} />
-            <span>Healthy (NDVI &gt; 0.65)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#B8862D' }} />
-            <span>Warning (NDVI 0.40)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#B64A43' }} />
-            <span>Critical Anomaly</span>
-          </div>
-        </div>
+      {/* Legend Bar */}
+      <div style={{
+        position: 'absolute', bottom: 30, left: 12, zIndex: 999,
+        background: 'rgba(15,20,15,0.82)', backdropFilter: 'blur(8px)',
+        padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)',
+        display: 'flex', gap: 14, alignItems: 'center', fontSize: '10px', fontWeight: 600, color: '#E0E1D8',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+      }}>
+        <LegendDot color="#EF5350" label="Late Blight" />
+        <LegendDot color="#FF9800" label="Low Moisture" />
+        <LegendDot color="#FFD600" label="Warning" />
+        <LegendDot color="#42A5F5" label="Drone-01" isDash />
+        <LegendLine color="#00E5FF" label="Field Boundary" />
       </div>
+
+      {/* Leaflet map container — must be full size with no overflow clipping */}
+      <div
+        ref={mapContainerRef}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      />
+
+      {/* Inject custom marker & map styles */}
+      <style>{`
+        .agri-field-tip { font-family: monospace; }
+        .agri-popup .leaflet-popup-content-wrapper { border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+
+        .agri-pulse-marker { position: relative; width: 28px; height: 28px; }
+        .agri-pulse-ring {
+          position: absolute; inset: 0; border-radius: 50%;
+          border: 2px solid var(--pulse-color);
+          animation: agriPulseRing 1.8s ease-out infinite;
+        }
+        .agri-pulse-dot {
+          position: absolute; top: 6px; left: 6px;
+          width: 16px; height: 16px; border-radius: 50%;
+          background: var(--pulse-color);
+          border: 2px solid #fff;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        @keyframes agriPulseRing {
+          0%   { transform: scale(0.6); opacity: 1; }
+          80%  { transform: scale(2.2); opacity: 0; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        .agri-drone-marker { position: relative; width: 32px; height: 32px; }
+        .agri-drone-ring {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: rgba(66,165,245,0.2); border: 2px solid rgba(66,165,245,0.9);
+          animation: agriDroneRing 1.5s ease-out infinite;
+        }
+        .agri-drone-icon {
+          position: absolute; top: 6px; left: 6px;
+          width: 20px; height: 20px; border-radius: 50%;
+          background: #1565C0; border: 2px solid #fff;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; color: #fff;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        @keyframes agriDroneRing {
+          0%   { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };
+
+// Helper components
+const LegendDot: React.FC<{ color: string; label: string; isDash?: boolean }> = ({ color, label }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+    <span style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: color, display: 'inline-block', flexShrink: 0 }} />
+    <span>{label}</span>
+  </div>
+);
+
+const LegendLine: React.FC<{ color: string; label: string }> = ({ color, label }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+    <span style={{ width: 14, height: 2.5, backgroundColor: color, display: 'inline-block', flexShrink: 0 }} />
+    <span>{label}</span>
+  </div>
+);

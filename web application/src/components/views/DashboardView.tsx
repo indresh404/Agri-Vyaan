@@ -133,7 +133,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   TODAY'S FIELD OPERATIONS
                 </h2>
                 <div style={{ fontSize: '12px', color: '#6B7068' }}>
-                  Live spatial coverage · Field A (Wheat, 4.8 ha) · Scan OP-0142 active (68%)
+                  Live spatial coverage · Field A (Potato, 4.8 ha) · Scan OP-0142 active (68%)
                 </div>
               </div>
               <button 
