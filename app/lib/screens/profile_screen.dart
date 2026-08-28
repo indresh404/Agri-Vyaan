@@ -299,15 +299,6 @@ class ProfileScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.person, color: Colors.green.shade800, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Profile',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.green.shade800,
-                          ),
-                        ),
                       ],
                     ),
                   ),

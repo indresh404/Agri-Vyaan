@@ -21,7 +21,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
   @override
   void initState() {
     super.initState();
-    _loadWeatherData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadWeatherData();
+    });
   }
 
   Future<void> _loadWeatherData() async {
@@ -30,23 +32,12 @@ class _WeatherScreenState extends State<WeatherScreen> {
       _errorMessage = '';
     });
 
+    final appState = AppStateProvider.of(context);
+
     try {
-      // Get user location from app state
-      final appState = AppStateProvider.of(context);
-      final location = appState.currentProfile?.location ?? 'Vasai-Virar';
-
-      // For production: Use actual coordinates
-      // const double latitude = 19.47;
-      // const double longitude = 72.78;
-
-      // Fetch weather from API
-      // final forecast = await _weatherService.fetchWeatherForecast(
-      //   latitude: latitude,
-      //   longitude: longitude,
-      // );
-
-      // For development: Use mock data
-      final forecast = _weatherService.getMockWeatherData();
+      final location =
+          appState.currentProfile?.location ?? 'Wardha, Maharashtra';
+      final forecast = await _weatherService.fetchWeatherForLocation(location);
 
       // Fetch AI summary for the forecast
       if (forecast.isNotEmpty) {
@@ -56,7 +47,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
           cropType: cropType,
         );
 
-        // Update today's forecast with AI summary
         if (forecast.isNotEmpty) {
           forecast[0] = WeatherForecast(
             dayName: forecast[0].dayName,
@@ -82,11 +72,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
-        // Use mock data as fallback
         _forecast = _weatherService.getMockWeatherData();
       });
-      final fallbackAppState = AppStateProvider.of(context);
-      fallbackAppState.updateWeatherForecast(_weatherService.getMockWeatherData());
+      appState.updateWeatherForecast(_weatherService.getMockWeatherData());
     }
   }
 
@@ -102,8 +90,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppStateProvider.of(context);
-
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -244,6 +230,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 
   Widget _buildCurrentWeatherCard(WeatherForecast today) {
+    final location =
+        AppStateProvider.of(context).currentProfile?.location ??
+        'Farm location';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -268,23 +257,31 @@ class _WeatherScreenState extends State<WeatherScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Vasai-Virar',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      location,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    today.date,
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
+                    Text(
+                      today.date,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               _buildWeatherIcon(today.weatherCondition),
             ],
           ),
@@ -342,7 +339,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
           const SizedBox(height: 8),
 
           // Sunset and Humidity
-          Row(
+          Wrap(
+            spacing: 20,
+            runSpacing: 8,
             children: [
               const Icon(Icons.wb_sunny, color: Colors.white70, size: 18),
               const SizedBox(width: 4),
@@ -350,14 +349,12 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 'Sunset 6:59 pm',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
-              const SizedBox(width: 20),
               const Icon(Icons.water_drop, color: Colors.white70, size: 18),
               const SizedBox(width: 4),
               Text(
                 '${today.humidity.toStringAsFixed(0)}%',
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-              const SizedBox(width: 20),
               const Icon(Icons.air, color: Colors.white70, size: 18),
               const SizedBox(width: 4),
               Text(

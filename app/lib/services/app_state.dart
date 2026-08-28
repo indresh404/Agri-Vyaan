@@ -924,6 +924,11 @@ class AppState extends ChangeNotifier {
     _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
     notifyListeners();
   }
+
+  void updateWeatherForecast(List<WeatherForecast> forecast) {
+    _weatherForecast = forecast;
+    notifyListeners();
+  }
 }
 
 class AppStateProvider extends InheritedNotifier<AppState> {
