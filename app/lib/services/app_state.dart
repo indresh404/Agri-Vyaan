@@ -159,6 +159,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Profile Management ---
+  void updateProfile(FarmerProfile profile) {
+    _currentProfile = profile;
+    notifyListeners();
+  }
+
   // --- Field Management ---
   void addField(CropField field) {
     _fields.add(field);
