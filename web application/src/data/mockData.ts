@@ -1,12 +1,20 @@
 import type { FarmerRequest, FieldAsset, DroneOperation, CropFinding, AssessmentReport, ActivityItem, ZoneData, SensorReading, WeatherForecast, LibraryItem, ActionEntry } from '../types';
 
 // ─── Helper: generate 6x6 zone grid for a field ───────────────────────────────
+// GPS coords are spread across the Ambegaon potato field (19.0536–19.0550°N, 73.8810–73.8830°E)
 const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneData[] => {
   const zones: ZoneData[] = [];
   let count = 1;
+  // Field boundary spans roughly 0.0014° lat × 0.0020° lng → 6 cells each
+  const LAT_START = 19.0537;
+  const LNG_START = 73.8812;
+  const LAT_STEP  = 0.0002;   // ~22m per row
+  const LNG_STEP  = 0.0003;   // ~27m per col
   for (let r = 1; r <= 6; r++) {
     for (let c = 1; c <= 6; c++) {
       const override = overrides[count] || {};
+      const lat = (LAT_START + (r - 1) * LAT_STEP).toFixed(4);
+      const lng = (LNG_START + (c - 1) * LNG_STEP).toFixed(4);
       zones.push({
         id: `Zone ${count}`,
         zoneNumber: count,
@@ -15,7 +23,7 @@ const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneD
         status: 'Healthy',
         soilMoisture: 50 + ((count * 3) % 12),
         temperature: 29,
-        gpsCoords: `19.${2180 + count}, 72.${9770 + count}`,
+        gpsCoords: `${lat}, ${lng}`,
         lastScanned: 'Today, 10:42 AM',
         ...override
       });
@@ -24,6 +32,7 @@ const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneD
   }
   return zones;
 };
+
 
 // ─── FARMER REQUESTS ──────────────────────────────────────────────────────────
 export const MOCK_REQUESTS: FarmerRequest[] = [
