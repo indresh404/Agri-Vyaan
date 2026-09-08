@@ -10,7 +10,8 @@ void main() {
     await tester.pumpWidget(const AgrivyaanApp());
     await tester.pumpAndSettle();
 
-    // Verify that onboarding header is present on initial launch
-    expect(find.text('Welcome to Agrivyaan'), findsOneWidget);
+    // Verify that onboarding language selection is present on initial launch
+    expect(find.text('Choose Your Language'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
   });
 }

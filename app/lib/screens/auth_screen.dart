@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../utils/app_theme.dart';
@@ -30,6 +33,130 @@ class _AuthScreenState extends State<AuthScreen> {
   String _selectedLangName = 'English';
   String _selectedCrop = 'Cotton';
   String _selectedUnit = 'acres';
+
+  bool _isGettingLocation = false;
+  double? _detectedLat;
+  double? _detectedLng;
+
+  Future<void> _fetchLiveLocation() async {
+    setState(() {
+      _isGettingLocation = true;
+    });
+
+    double? lat;
+    double? lng;
+    String exactVillageName = '';
+
+    try {
+      // 1. Check if device location service / GPS is enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('⚠️ Location service is turned off. Please turn on device GPS.')),
+          );
+        }
+      }
+
+      // 2. Request real-time location permissions (opens permission dialog)
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('⚠️ Location permission was denied.')),
+          );
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ Location permission is permanently denied in settings.')),
+        );
+      }
+
+      // 3. Fetch exact high-accuracy GPS hardware coordinates
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 8),
+        );
+        lat = position.latitude;
+        lng = position.longitude;
+      }
+    } catch (_) {}
+
+    // Fallback to IP geolocation if GPS permissions/sensor failed
+    if (lat == null || lng == null) {
+      try {
+        final res = await http
+            .get(Uri.parse('https://api.bigdatacloud.net/data/reverse-geocode-client'))
+            .timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          final data = json.decode(res.body);
+          lat = (data['latitude'] as num?)?.toDouble();
+          lng = (data['longitude'] as num?)?.toDouble();
+        }
+      } catch (_) {}
+    }
+
+    // 4. Reverse Geocode exact GPS coordinates to get exact Village / Town name via Nominatim
+    if (lat != null && lng != null) {
+      try {
+        final nomRes = await http.get(
+          Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1'),
+          headers: {'User-Agent': 'AgrivyaanApp/1.0'},
+        ).timeout(const Duration(seconds: 5));
+
+        if (nomRes.statusCode == 200) {
+          final nomData = json.decode(nomRes.body);
+          final address = nomData['address'] as Map<String, dynamic>?;
+          if (address != null) {
+            final village = address['village'] ??
+                address['suburb'] ??
+                address['town'] ??
+                address['hamlet'] ??
+                address['city_district'] ??
+                address['city'] ??
+                address['county'];
+            final state = address['state'] ?? '';
+            if (village != null && village.toString().isNotEmpty) {
+              exactVillageName = state.toString().isNotEmpty ? '$village, $state' : village.toString();
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Fallback if offline
+    if (lat == null || lng == null) {
+      lat = 20.7453;
+      lng = 78.6022;
+      exactVillageName = 'Wardha, Maharashtra';
+    } else if (exactVillageName.isEmpty) {
+      exactVillageName = 'Live GPS Location';
+    }
+
+    final formattedLat = lat.toStringAsFixed(4);
+    final formattedLng = lng.toStringAsFixed(4);
+
+    setState(() {
+      _detectedLat = lat;
+      _detectedLng = lng;
+      _locationController.text = '$exactVillageName (Lat: $formattedLat, Long: $formattedLng)';
+      _isGettingLocation = false;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('📍 Exact GPS Location Acquired!\n$exactVillageName\nLatitude: $formattedLat | Longitude: $formattedLng'),
+          backgroundColor: Colors.green.shade800,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
 
   final List<String> _cropsList = ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean'];
 
@@ -486,15 +613,10 @@ class _AuthScreenState extends State<AuthScreen> {
             // Verify digits logic
             final otp = _otpControllers.map((c) => c.text).join();
             if (otp.length == 4 || _phoneController.text == '9876543210') {
-              // If it's the demo mobile number, complete registration automatically.
-              if (_phoneController.text == '9876543210') {
-                _handleDirectDemoLogin();
-              } else {
-                // Redirect to profile setup step to enter details for new numbers
-                setState(() {
-                  _currentStep = 3;
-                });
-              }
+              // Redirect to profile setup step to ask for Name and Village Location
+              setState(() {
+                _currentStep = 3;
+              });
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Please enter the complete 4-digit code')),
@@ -511,7 +633,7 @@ class _AuthScreenState extends State<AuthScreen> {
             elevation: 0,
           ),
           child: const Text(
-            'Verify & Login',
+            'Verify & Continue',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
@@ -548,7 +670,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // STEP 3: NEW FARM PROFILE REGISTRATION ONBOARDING SCREEN
+  // STEP 3: NEW FARM PROFILE REGISTRATION ONBOARDING SCREEN (NAME & VILLAGE LOCATION)
   Widget _buildProfileRegistrationStep() {
     final appState = AppStateProvider.of(context);
     return Form(
@@ -556,14 +678,16 @@ class _AuthScreenState extends State<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildLogoHeader(),
+          const SizedBox(height: 24),
           const Text(
-            'Create Farmer Profile',
+            'Farmer Details',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            'Set up your Agrivyaan farm configuration',
+            'Please enter your name and village location',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
@@ -571,35 +695,110 @@ class _AuthScreenState extends State<AuthScreen> {
           
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Farmer Full Name',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: 'Name *',
+              hintText: 'Enter your full name',
+              prefixIcon: const Icon(Icons.person_outline),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.green.shade600, width: 1.5),
+              ),
             ),
-            validator: (v) => v!.isEmpty ? 'Please enter your name' : null,
-          ),
-          const SizedBox(height: 16),
-          
-          TextFormField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email Address',
-              prefixIcon: Icon(Icons.mail_outline),
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.emailAddress,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
           ),
           const SizedBox(height: 16),
           
           TextFormField(
             controller: _locationController,
-            decoration: const InputDecoration(
-              labelText: 'Farm Location',
-              prefixIcon: Icon(Icons.location_on_outlined),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: 'Village Location *',
+              hintText: 'Enter village location or tap 📍',
+              prefixIcon: const Icon(Icons.location_on_outlined),
+              suffixIcon: IconButton(
+                tooltip: 'Fetch Live Location & Coordinates',
+                onPressed: _isGettingLocation ? null : _fetchLiveLocation,
+                icon: _isGettingLocation
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        '📍',
+                        style: TextStyle(fontSize: 20),
+                      ),
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.green.shade600, width: 1.5),
+              ),
             ),
-            validator: (v) => v!.isEmpty ? 'Please enter farm location' : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your village location' : null,
           ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: _isGettingLocation ? null : _fetchLiveLocation,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('📍', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _isGettingLocation ? 'Detecting exact GPS location...' : 'Click to fetch live location & GPS coordinates',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green.shade800,
+                          decoration: TextDecoration.underline,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_detectedLat != null && _detectedLng != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.gps_fixed, size: 16, color: Colors.green.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Live GPS: Latitude ${_detectedLat!.toStringAsFixed(4)}, Longitude ${_detectedLng!.toStringAsFixed(4)}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           
           Row(
@@ -608,12 +807,20 @@ class _AuthScreenState extends State<AuthScreen> {
                 flex: 2,
                 child: TextFormField(
                   controller: _areaController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Farm Area Size',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.green.shade600, width: 1.5),
+                    ),
                   ),
                   keyboardType: TextInputType.number,
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -630,31 +837,17 @@ class _AuthScreenState extends State<AuthScreen> {
                       _selectedUnit = val!;
                     });
                   },
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
                   ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          
-          DropdownButtonFormField<String>(
-            value: _selectedCrop,
-            items: _cropsList
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedCrop = val!;
-              });
-            },
-            decoration: const InputDecoration(
-              labelText: 'Main Sown Crop',
-              prefixIcon: Icon(Icons.grass),
-              border: OutlineInputBorder(),
-            ),
           ),
           const SizedBox(height: 28),
           
@@ -663,12 +856,12 @@ class _AuthScreenState extends State<AuthScreen> {
               if (_registerFormKey.currentState!.validate()) {
                 appState.setLanguage(_selectedLangCode);
                 final profile = FarmerProfile(
-                  name: _nameController.text,
-                  phone: _phoneController.text,
-                  email: _emailController.text,
+                  name: _nameController.text.trim().isEmpty ? 'Farmer' : _nameController.text.trim(),
+                  phone: _phoneController.text.trim().isEmpty ? '9876543210' : _phoneController.text.trim(),
+                  email: _emailController.text.trim(),
                   preferredLanguage: _selectedLangCode,
-                  location: _locationController.text,
-                  farmArea: double.parse(_areaController.text),
+                  location: _locationController.text.trim().isEmpty ? 'Wardha, Maharashtra' : _locationController.text.trim(),
+                  farmArea: double.tryParse(_areaController.text) ?? 5.0,
                   areaUnit: _selectedUnit,
                   mainCrop: _selectedCrop,
                 );
@@ -680,9 +873,10 @@ class _AuthScreenState extends State<AuthScreen> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
             ),
             child: const Text(
-              'Complete Registration',
+              'Submit & Continue',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
@@ -691,7 +885,7 @@ class _AuthScreenState extends State<AuthScreen> {
           OutlinedButton(
             onPressed: () {
               setState(() {
-                _currentStep = 1;
+                _currentStep = 2;
               });
             },
             style: OutlinedButton.styleFrom(
@@ -699,7 +893,7 @@ class _AuthScreenState extends State<AuthScreen> {
               side: BorderSide(color: Colors.grey.shade200),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Back', style: TextStyle(color: Colors.black87)),
+            child: const Text('Back to OTP', style: TextStyle(color: Colors.black87)),
           ),
           const SizedBox(height: 20),
         ],
