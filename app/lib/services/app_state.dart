@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../models/soil_health_card.dart';
 import 'localization.dart';
+import 'soil_health_card_storage_service.dart';
+import 'soil_health_card_demo_data.dart';
 
 class AppState extends ChangeNotifier {
   // Authentication & Onboarding
@@ -52,8 +55,71 @@ class AppState extends ChangeNotifier {
   final List<String> _requestedReportFieldIds = [];
   List<String> get requestedReportFieldIds => _requestedReportFieldIds;
 
+  // Soil Health Card data (field-specific)
+  Map<String, List<SoilHealthCard>> _soilHealthCards = {};
+  Map<String, List<SoilHealthCard>> get soilHealthCards => _soilHealthCards;
+
+  final SoilHealthCardStorageService _shcStorageService =
+      SoilHealthCardStorageService();
+
   AppState() {
     _initializeData();
+    _loadSoilHealthCards();
+  }
+
+  // --- Soil Health Card Management ---
+
+  Future<void> _loadSoilHealthCards() async {
+    final loaded = await _shcStorageService.loadCards();
+    if (loaded.isNotEmpty) {
+      _soilHealthCards = loaded;
+    }
+    // If no persisted data, demo data from _initializeData is used
+    notifyListeners();
+  }
+
+  List<SoilHealthCard> getCardsForField(String fieldId) {
+    return _soilHealthCards[fieldId] ?? [];
+  }
+
+  SoilHealthCard? getCurrentCardForField(String fieldId) {
+    final cards = _soilHealthCards[fieldId] ?? [];
+    try {
+      return cards.firstWhere((c) => c.isCurrent);
+    } catch (_) {
+      return cards.isNotEmpty ? cards.first : null;
+    }
+  }
+
+  Future<void> addSoilHealthCard(String fieldId, SoilHealthCard card) async {
+    final fieldCards = _soilHealthCards[fieldId] ?? [];
+    // Mark previous current as non-current
+    final updated = fieldCards.map((c) {
+      if (c.isCurrent) return c.copyWith(isCurrent: false);
+      return c;
+    }).toList();
+    // Insert new card as current at the top
+    updated.insert(0, card.copyWith(isCurrent: true));
+    _soilHealthCards[fieldId] = updated;
+    await _shcStorageService.saveCards(_soilHealthCards);
+    _addNotification(
+      title: 'Soil Health Card Added',
+      description: 'A new Soil Health Card record has been saved and verified.',
+      isCritical: false,
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateSoilHealthCard(
+      String fieldId, SoilHealthCard card) async {
+    final fieldCards = _soilHealthCards[fieldId] ?? [];
+    final index = fieldCards.indexWhere((c) => c.id == card.id);
+    if (index != -1) {
+      fieldCards[index] = card;
+      _soilHealthCards[fieldId] = fieldCards;
+      await _shcStorageService.saveCards(_soilHealthCards);
+      notifyListeners();
+    }
   }
 
   // --- Translation Helper ---
@@ -903,6 +969,9 @@ class AppState extends ChangeNotifier {
         isCritical: true,
       ),
     ];
+
+    // Initialize Soil Health Card demo data
+    _soilHealthCards = SoilHealthCardDemoData.demoCards;
   }
 
   void _addNotification({
