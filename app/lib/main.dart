@@ -1,122 +1,360 @@
 import 'package:flutter/material.dart';
+import 'models/models.dart';
+import 'services/app_state.dart';
+import 'screens/auth_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/fields_screen.dart';
+import 'screens/scans_screen.dart';
+import 'screens/reports_screen.dart';
+import 'screens/tools_screen.dart';
+import 'screens/library_screen.dart';
+import 'screens/chat_screen.dart';
+import 'screens/admin_screen.dart';
+import 'screens/operator_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/weather_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'utils/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AgrivyaanApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AgrivyaanApp extends StatelessWidget {
+  const AgrivyaanApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+    return AppStateProvider(
+      notifier: AppState(),
+      child: MaterialApp(
+        title: 'Agrivyaan',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.theme,
+        home: const AppShell(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class AppShell extends StatefulWidget {
+  const AppShell({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AppShell> createState() => _AppShellState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class _AppShellState extends State<AppShell> {
+  int _currentTabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final appState = AppStateProvider.of(context);
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width > 768;
+
+    // Check Authentication
+    if (!appState.isLoggedIn) {
+      return const AuthScreen();
+    }
+
+    // Determine content based on Active Role
+    Widget activeContent = const SizedBox();
+    if (appState.currentRole == 'ADMIN') {
+      activeContent = const AdminScreen();
+    } else if (appState.currentRole == 'OPERATOR') {
+      activeContent = const OperatorScreen();
+    } else {
+      // Farmer Mode
+      switch (_currentTabIndex) {
+        case 0:
+          activeContent = HomeScreen(
+            onTabSelected: (idx) {
+              setState(() {
+                _currentTabIndex = idx;
+              });
+            },
+            onPushScreen: (screen) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => screen),
+              );
+            },
+          );
+          break;
+        case 1:
+          activeContent = const FieldsScreen();
+          break;
+        case 2:
+          activeContent = const SizedBox.shrink();
+          break;
+        case 3:
+          activeContent = const ReportsScreen();
+          break;
+        case 4:
+          activeContent = const ProfileScreen();
+          break;
+      }
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+      appBar: null,
+      body: SafeArea(
+        child: Row(
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            // Responsive Sidebar Navigation for Desktop
+            if (isDesktop && appState.currentRole == 'FARMER')
+              NavigationRail(
+                selectedIndex: _currentTabIndex,
+                onDestinationSelected: (idx) {
+                  if (idx == 2) {
+                    _showActionSelectionModal(context, appState);
+                  } else {
+                    setState(() {
+                      _currentTabIndex = idx;
+                    });
+                  }
+                },
+                extended: width > 1000,
+                leading: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.psychology_outlined,
+                          color: AppTheme.primaryGreen, size: 28),
+                      if (width > 1000) ...[
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Agrivyaan',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppTheme.primaryGreen,
+                          ),
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.landscape_outlined),
+                    selectedIcon: Icon(Icons.landscape),
+                    label: Text('Fields'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.add_circle_outline,
+                        color: AppTheme.primaryGreen),
+                    selectedIcon:
+                        Icon(Icons.add_circle, color: AppTheme.primaryGreen),
+                    label: Text('Quick Add'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.assessment_outlined),
+                    selectedIcon: Icon(Icons.assessment),
+                    label: Text('Reports'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: Text('Profile'),
+                  ),
+                ],
+              ),
+
+            // Primary content area
+            Expanded(
+              child: activeContent,
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      bottomNavigationBar: (!isDesktop && appState.currentRole == 'FARMER')
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Container(
+                  height: 65,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.grey.shade100),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildBottomNavItem(context, appState, 0,
+                          Icons.home_outlined, Icons.home, 'Home'),
+                      _buildBottomNavItem(context, appState, 1,
+                          Icons.landscape_outlined, Icons.landscape, 'Fields'),
+                      _buildBottomNavItem(
+                          context,
+                          appState,
+                          2,
+                          Icons.add_circle_outline,
+                          Icons.add_circle,
+                          '+',
+                          color: AppTheme.primaryGreen),
+                      _buildBottomNavItem(
+                          context,
+                          appState,
+                          3,
+                          Icons.assessment_outlined,
+                          Icons.assessment,
+                          'Reports'),
+                      _buildBottomNavItem(context, appState, 4,
+                          Icons.person_outline, Icons.person, 'Profile'),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildBottomNavItem(
+      BuildContext context,
+      AppState appState,
+      int index,
+      IconData icon,
+      IconData activeIcon,
+      String label,
+      {Color? color}) {
+    final isSelected = _currentTabIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (index == 2) {
+            _showActionSelectionModal(context, appState);
+          } else {
+            setState(() {
+              _currentTabIndex = index;
+            });
+          }
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected
+                  ? (color ?? AppTheme.primaryGreen)
+                  : Colors.grey.shade600,
+              size: index == 2 ? 28 : 22,
+            ),
+            if (index != 2)
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? AppTheme.primaryGreen
+                      : Colors.grey.shade600,
+                ),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+
+  void _showActionSelectionModal(BuildContext context, AppState appState) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Agrivyaan Quick Actions',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: AppTheme.primaryGreenSurface,
+                      shape: BoxShape.circle),
+                  child: const Icon(Icons.landscape,
+                      color: AppTheme.primaryGreen),
+                ),
+                title: const Text('Register New Field',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Add a new field, crop, and location details'),
+                onTap: () {
+                  Navigator.pop(context);
+                  FieldsScreen.showAddFieldDialog(context, appState);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: Colors.purple.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.flight_takeoff,
+                      color: Colors.purple.shade700),
+                ),
+                title: const Text('Book Drone Scan',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle:
+                    const Text('Schedule crop health or soil moisture drone scan'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScansScreen.showRequestScanModal(context, appState);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: Colors.blue.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.healing, color: Colors.blue.shade700),
+                ),
+                title: const Text('Record Farm Action',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text(
+                    'Log irrigation, fertilizer, or crop inspections'),
+                onTap: () {
+                  Navigator.pop(context);
+                  FieldsScreen.showGlobalRecordActionModal(context, appState);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
