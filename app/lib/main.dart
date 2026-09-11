@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/supabase_service.dart';
 import 'models/models.dart';
 import 'services/app_state.dart';
 import 'screens/auth_screen.dart';
@@ -16,10 +18,21 @@ import 'screens/weather_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'utils/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Could not load .env file: $e");
+  }
+  try {
+    await SupabaseService.initialize();
+  } catch (e) {
+    debugPrint("Supabase initialization error: $e");
+  }
   runApp(const AgrivyaanApp());
 }
+
 
 class AgrivyaanApp extends StatelessWidget {
   const AgrivyaanApp({super.key});

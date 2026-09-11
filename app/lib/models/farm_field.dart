@@ -249,7 +249,7 @@ class FarmField {
         name: c.name as String,
         crop: c.crop as String,
         area: (c.area as num).toDouble(),
-        location: '${c.areaUnit} • ${c.cropStage}',
+        location: (c.location as String?)?.isNotEmpty == true ? c.location as String : '${c.areaUnit} • ${c.cropStage}',
         sowingDate: DateTime.tryParse(c.sowingDate as String) ?? DateTime.now(),
         healthScore: (c.healthScore as num).toDouble(),
         soilMoisture: zonesList.isNotEmpty ? zonesList.first.soilMoisture : 45.0,
