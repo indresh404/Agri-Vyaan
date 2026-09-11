@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/farm_field.dart';
 import '../models/models.dart';
 import '../models/soil_health_card.dart';
-import 'localization.dart';
+import 'field_storage_service.dart';
 import 'soil_health_card_storage_service.dart';
+import 'booking_service.dart';
+import 'localization.dart';
 import 'soil_health_card_demo_data.dart';
+import 'package:uuid/uuid.dart';
 
 class AppState extends ChangeNotifier {
-  // Authentication & Onboarding
+  // Authentication & Session
   bool _isLoggedIn = false;
   bool get isLoggedIn => _isLoggedIn;
 
+  bool _isLoadingAuth = false;
+  bool get isLoadingAuth => _isLoadingAuth;
+
   FarmerProfile? _currentProfile;
   FarmerProfile? get currentProfile => _currentProfile;
+
+  String? get currentFid => _currentProfile?.fid ?? _supabase.auth.currentUser?.id;
+  bool _needsProfileSetup = false;
+  bool get needsProfileSetup => _needsProfileSetup;
 
   // Language & Role Configuration
   String _currentLanguage = 'en';
@@ -23,7 +36,7 @@ class AppState extends ChangeNotifier {
   // Offline Architecture
   bool _isOffline = false;
   bool get isOffline => _isOffline;
-  
+
   final List<ActionEntry> _offlineActionQueue = [];
   List<ActionEntry> get offlineActionQueue => _offlineActionQueue;
 
@@ -59,22 +72,332 @@ class AppState extends ChangeNotifier {
   Map<String, List<SoilHealthCard>> _soilHealthCards = {};
   Map<String, List<SoilHealthCard>> get soilHealthCards => _soilHealthCards;
 
-  final SoilHealthCardStorageService _shcStorageService =
-      SoilHealthCardStorageService();
+  // Services
+  SupabaseClient get _supabase => Supabase.instance.client;
+  final FieldStorageService _fieldStorageService = FieldStorageService();
+  final SoilHealthCardStorageService _shcStorageService = SoilHealthCardStorageService();
+  final BookingService _bookingService = BookingService();
 
   AppState() {
     _initializeData();
-    _loadSoilHealthCards();
+    _checkExistingSession();
+    _listenToAuthState();
+  }
+
+  // --- Session & Supabase Auth Sync ---
+
+  Future<void> _checkExistingSession() async {
+    try {
+      final session = _supabase.auth.currentSession;
+      final user = _supabase.auth.currentUser;
+
+      if (session != null && user != null) {
+        debugPrint('Active Supabase session detected for user: ${user.id} (${user.phone})');
+        await loadUserDataFromSupabase(user.id, phone: user.phone);
+        return;
+      }
+
+      // Restore session from local SharedPreferences if user logged in by phone
+      final prefs = await SharedPreferences.getInstance();
+      final savedFid = prefs.getString('saved_farmer_fid');
+      final savedPhone = prefs.getString('saved_farmer_phone');
+
+      if (savedFid != null && savedFid.isNotEmpty && FieldStorageService.isUuid(savedFid)) {
+        final profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('fid', savedFid)
+            .maybeSingle();
+
+        if (profileRes != null) {
+          _currentProfile = FarmerProfile.fromMap(profileRes);
+          _isLoggedIn = true;
+          _needsProfileSetup = false;
+          debugPrint('Restored farmer session for FID: $savedFid (${_currentProfile?.name})');
+          await loadUserDataFromSupabase(savedFid, phone: _currentProfile?.phone);
+          return;
+        }
+      } else if (savedPhone != null && savedPhone.isNotEmpty) {
+        final profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('phone_no', savedPhone)
+            .maybeSingle();
+
+        if (profileRes != null) {
+          _currentProfile = FarmerProfile.fromMap(profileRes);
+          _isLoggedIn = true;
+          _needsProfileSetup = false;
+          final fid = _currentProfile?.fid ?? profileRes['fid']?.toString();
+          if (fid != null) {
+            await prefs.setString('saved_farmer_fid', fid);
+            await loadUserDataFromSupabase(fid, phone: savedPhone);
+            return;
+          }
+        }
+      }
+
+      debugPrint('No active farmer session found on startup.');
+    } catch (e) {
+      debugPrint('Error checking existing Supabase session: $e');
+    }
+  }
+
+  void _listenToAuthState() {
+    try {
+      _supabase.auth.onAuthStateChange.listen((data) async {
+        final AuthChangeEvent event = data.event;
+        final Session? session = data.session;
+
+        if (event == AuthChangeEvent.signedIn && session != null) {
+          final user = session.user;
+          await loadUserDataFromSupabase(user.id, phone: user.phone);
+        } else if (event == AuthChangeEvent.signedOut) {
+          await logout();
+        }
+      });
+    } catch (e) {
+      debugPrint('Error attaching auth state change listener: $e');
+    }
+  }
+
+  /// Load profile, fields, soil health cards, and bookings strictly for current authenticated farmer
+  Future<void> loadUserDataFromSupabase(String authOrFid, {String? phone}) async {
+    _isLoadingAuth = true;
+    notifyListeners();
+
+    try {
+      // 1. Fetch User Profile
+      Map<String, dynamic>? profileRes;
+      if (FieldStorageService.isUuid(authOrFid)) {
+        profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('fid', authOrFid)
+            .maybeSingle();
+      }
+
+      if (profileRes == null) {
+        profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('auth_id', authOrFid)
+            .maybeSingle();
+      }
+
+      if (profileRes != null) {
+        _currentProfile = FarmerProfile.fromMap(profileRes);
+        _isLoggedIn = true;
+        _needsProfileSetup = false;
+        debugPrint('Loaded farmer profile from Supabase for: ${_currentProfile?.name} (FID: ${_currentProfile?.fid})');
+      } else {
+        debugPrint('Authenticated user has no profile record in users table yet.');
+        _currentProfile = FarmerProfile(
+          name: 'Farmer',
+          phone: phone ?? _supabase.auth.currentUser?.phone ?? '',
+          email: '',
+          preferredLanguage: _currentLanguage,
+          location: 'Wardha, Maharashtra',
+          farmArea: 5.0,
+          areaUnit: 'acres',
+          mainCrop: 'Cotton',
+          fid: FieldStorageService.isUuid(authOrFid) ? authOrFid : null,
+        );
+        _isLoggedIn = false;
+        _needsProfileSetup = true;
+      }
+
+      final fidToUse = _currentProfile?.fid ?? (FieldStorageService.isUuid(authOrFid) ? authOrFid : null);
+
+      if (fidToUse != null && fidToUse.isNotEmpty) {
+        // Save session locally
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('saved_farmer_fid', fidToUse);
+          if (_currentProfile?.phone != null && _currentProfile!.phone.isNotEmpty) {
+            await prefs.setString('saved_farmer_phone', _currentProfile!.phone);
+          }
+        } catch (_) {}
+
+        // 2. Fetch Fields strictly belonging to this farmer
+        final farmFields = await _fieldStorageService.loadFields(fid: fidToUse);
+        _fields = farmFields.map((ff) => CropField.fromFarmField(ff)).toList();
+
+        // 3. Fetch Soil Health Cards strictly for this farmer
+        final loadedShc = await _shcStorageService.loadCards(fid: fidToUse);
+        _soilHealthCards = loadedShc;
+
+        // 4. Fetch Bookings strictly for this farmer
+        final loadedBookings = await _bookingService.loadBookings(fidToUse);
+        _scans = loadedBookings;
+      } else {
+        _fields = [];
+        _scans = [];
+        _soilHealthCards = {};
+      }
+    } catch (e) {
+      debugPrint('Error loading farmer data from Supabase: $e');
+    } finally {
+      _isLoadingAuth = false;
+      notifyListeners();
+    }
+  }
+
+  // --- Phone OTP Authentication ---
+
+  /// Step 1: Send OTP to farmer phone number via Supabase Auth (Twilio backend)
+  /// NOTE: Requires Twilio configured in Supabase Dashboard:
+  /// Authentication > Providers > Phone > Enable + add Twilio credentials
+  Future<void> sendOtpToPhone(String phone) async {
+    final formattedPhone = _formatIndianPhone(phone);
+    debugPrint('Sending OTP via Supabase Auth to: $formattedPhone');
+    try {
+      await _supabase.auth.signInWithOtp(phone: formattedPhone);
+      debugPrint('OTP sent successfully to $formattedPhone');
+    } catch (e) {
+      debugPrint('OTP send error: $e');
+      // Re-throw with a cleaner message
+      if (e.toString().contains('Twilio') || e.toString().contains('provider') || e.toString().contains('phone_provider')) {
+        throw Exception(
+          'SMS provider not configured. Please enable Phone Auth + Twilio in Supabase Dashboard, '
+          'or use Demo Login to test the app without SMS.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// Step 2: Verify OTP token with Supabase Auth
+  /// Returns user if Supabase Phone Auth is configured, null otherwise.
+  /// Never throws — failure is handled gracefully so onboarding can continue.
+  Future<User?> verifyOtpToken(String phone, String token) async {
+    final formattedPhone = _formatIndianPhone(phone);
+    debugPrint('Attempting OTP verification for: $formattedPhone');
+    try {
+      final response = await _supabase.auth.verifyOTP(
+        phone: formattedPhone,
+        token: token,
+        type: OtpType.sms,
+      );
+      final user = response.user ?? _supabase.auth.currentUser;
+      if (user != null) {
+        debugPrint('OTP verified via Supabase Auth. User: ${user.id}');
+        await loadUserDataFromSupabase(user.id, phone: user.phone);
+      }
+      return user;
+    } catch (e) {
+      debugPrint('OTP verification skipped (Phone Auth not configured): $e');
+      return null; // Graceful fallback — caller proceeds to profile setup
+    }
+  }
+
+  String _formatIndianPhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
+    return '+91$digits';
+  }
+
+  /// Create or update farmer profile in Supabase `users` table
+  /// Works for both authenticated users and direct/demo users
+  Future<void> saveFarmerProfileToSupabase(FarmerProfile profile) async {
+    final authId = _supabase.auth.currentUser?.id;
+    debugPrint('Saving farmer profile to Supabase (auth_id: $authId, phone: ${profile.phone})...');
+
+    // Only include columns that exist in the actual users table schema:
+    // fid (auto), phone_no, name, location, auth_id
+    final mapData = <String, dynamic>{
+      'phone_no': profile.phone,
+      'name': profile.name,
+      'location': profile.location.isNotEmpty ? profile.location : null,
+    };
+
+    if (authId != null && authId.isNotEmpty) {
+      mapData['auth_id'] = authId;
+    }
+
+    Map<String, dynamic>? savedRow;
+
+    try {
+      if (authId != null && authId.isNotEmpty) {
+        savedRow = await _supabase
+            .from('users')
+            .upsert(mapData, onConflict: 'auth_id')
+            .select()
+            .single();
+      } else {
+        // Unauthenticated/direct entry: check if phone already exists
+        final existing = await _supabase
+            .from('users')
+            .select()
+            .eq('phone_no', profile.phone)   // match actual column name
+            .maybeSingle();
+
+        if (existing != null) {
+          savedRow = await _supabase
+              .from('users')
+              .update(mapData)
+              .eq('fid', existing['fid'])
+              .select()
+              .single();
+        } else {
+          savedRow = await _supabase
+              .from('users')
+              .insert(mapData)
+              .select()
+              .single();
+        }
+      }
+    } catch (e) {
+      debugPrint('Primary save to Supabase users table failed: $e. Retrying plain insert...');
+      try {
+        savedRow = await _supabase
+            .from('users')
+            .insert(mapData)
+            .select()
+            .single();
+      } catch (retryError) {
+        debugPrint('Error saving profile to Supabase on retry: $retryError');
+      }
+    }
+
+    if (savedRow != null) {
+      final newFid = savedRow['fid'].toString();
+      _currentProfile = profile.copyWith(fid: newFid);
+      _isLoggedIn = true;
+      _needsProfileSetup = false;
+      debugPrint('Successfully saved farmer profile to Supabase users table! FID: $newFid');
+
+      // Persist session to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('saved_farmer_fid', newFid);
+        if (profile.phone.isNotEmpty) {
+          await prefs.setString('saved_farmer_phone', profile.phone);
+        }
+      } catch (e) {
+        debugPrint('Error saving session locally: $e');
+      }
+
+      // Load data strictly for this newly registered/updated farmer
+      await loadUserDataFromSupabase(newFid, phone: profile.phone);
+    } else {
+      // Local fallback
+      _currentProfile = profile.copyWith(fid: profile.fid ?? const Uuid().v4());
+      _isLoggedIn = true;
+      _needsProfileSetup = false;
+    }
+
+    notifyListeners();
   }
 
   // --- Soil Health Card Management ---
 
   Future<void> _loadSoilHealthCards() async {
-    final loaded = await _shcStorageService.loadCards();
+    final fidToUse = currentFid;
+    final loaded = await _shcStorageService.loadCards(fid: fidToUse);
     if (loaded.isNotEmpty) {
       _soilHealthCards = loaded;
     }
-    // If no persisted data, demo data from _initializeData is used
     notifyListeners();
   }
 
@@ -91,17 +414,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> addSoilHealthCard(String fieldId, SoilHealthCard card) async {
-    final fieldCards = _soilHealthCards[fieldId] ?? [];
-    // Mark previous current as non-current
-    final updated = fieldCards.map((c) {
-      if (c.isCurrent) return c.copyWith(isCurrent: false);
-      return c;
-    }).toList();
-    // Insert new card as current at the top
-    updated.insert(0, card.copyWith(isCurrent: true));
-    _soilHealthCards[fieldId] = updated;
-    await _shcStorageService.saveCards(_soilHealthCards);
+  Future<void> addSoilHealthCard(String fieldId, SoilHealthCard card, {String? localFilePath}) async {
+    final fidToUse = currentFid;
+    await _shcStorageService.addCard(
+      _soilHealthCards,
+      fieldId,
+      card,
+      fid: fidToUse,
+      localFilePath: localFilePath,
+    );
+
     _addNotification(
       title: 'Soil Health Card Added',
       description: 'A new Soil Health Card record has been saved and verified.',
@@ -110,16 +432,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateSoilHealthCard(
-      String fieldId, SoilHealthCard card) async {
-    final fieldCards = _soilHealthCards[fieldId] ?? [];
-    final index = fieldCards.indexWhere((c) => c.id == card.id);
-    if (index != -1) {
-      fieldCards[index] = card;
-      _soilHealthCards[fieldId] = fieldCards;
-      await _shcStorageService.saveCards(_soilHealthCards);
-      notifyListeners();
-    }
+  Future<void> updateSoilHealthCard(String fieldId, SoilHealthCard card) async {
+    final fidToUse = currentFid;
+    await _shcStorageService.updateCard(_soilHealthCards, fieldId, card, fid: fidToUse);
+    notifyListeners();
   }
 
   // --- Translation Helper ---
@@ -140,12 +456,11 @@ class AppState extends ChangeNotifier {
   void toggleOfflineMode() {
     _isOffline = !_isOffline;
     if (!_isOffline && _offlineActionQueue.isNotEmpty) {
-      // Sync queue
       for (var action in _offlineActionQueue) {
         _actions.insert(0, action);
         _addNotification(
           title: 'Action Synced Successfully',
-          description: 'Your offline action "${action.title} on ${action.zoneName}" has been synchronized with the cloud database.',
+          description: 'Your offline action "${action.title} on ${action.zoneName}" has been synchronized with cloud.',
           isCritical: false,
         );
       }
@@ -154,16 +469,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Onboarding Flow ---
-  void completeOnboarding(FarmerProfile profile) {
-    _currentProfile = profile;
-    _isLoggedIn = true;
+  /// Create or update farmer profile in Supabase and optionally seed first field.
+  Future<void> completeOnboarding(
+    FarmerProfile profile, {
+    double? lat,
+    double? lng,
+  }) async {
+    await saveFarmerProfileToSupabase(profile);
 
-    // Automatically seed user's first field if name not empty
-    if (profile.mainCrop.isNotEmpty) {
-      final newField = CropField(
-        id: 'field_user',
-        name: 'My Sown ${profile.mainCrop} Field',
+    // Automatically seed user's first field if profile main crop not empty
+    if (profile.mainCrop.isNotEmpty && _fields.isEmpty) {
+      final fieldLat = lat ?? 20.7453;
+      final fieldLng = lng ?? 78.6022;
+      final newCropField = CropField(
+        id: 'field_${DateTime.now().millisecondsSinceEpoch}',
+        name: 'My ${profile.mainCrop} Field',
         crop: profile.mainCrop,
         area: profile.farmArea,
         areaUnit: profile.areaUnit,
@@ -216,85 +536,157 @@ class AppState extends ChangeNotifier {
             history: [28.0, 28.0],
           ),
         ],
+        // Store lat/lng in location string so farmFieldToMap can parse it
+        location: 'Lat: $fieldLat, Long: $fieldLng',
       );
-      _fields.add(newField);
+      await addField(newCropField);
     }
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    try {
+      await _supabase.auth.signOut();
+    } catch (e) {
+      debugPrint('Error signing out from Supabase: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('saved_farmer_fid');
+      await prefs.remove('saved_farmer_phone');
+    } catch (e) {
+      debugPrint('Error clearing local session: $e');
+    }
     _isLoggedIn = false;
+    _currentProfile = null;
+    _fields = [];
+    _scans = [];
+    _soilHealthCards = {};
     _initializeData();
     notifyListeners();
   }
 
   // --- Profile Management ---
-  void updateProfile(FarmerProfile profile) {
-    _currentProfile = profile;
-    notifyListeners();
+  void updateProfile(FarmerProfile profile) async {
+    await saveFarmerProfileToSupabase(profile);
   }
 
   // --- Field Management ---
-  void addField(CropField field) {
-    _fields.add(field);
+  Future<void> addField(CropField field) async {
+    final fidToUse = currentFid;
+    final userName = _currentProfile?.name ?? (field.userName != null && field.userName!.isNotEmpty ? field.userName! : 'Farmer');
+    
+    final farmField = FarmField.fromCropField(field).copyWith(
+      id: FieldStorageService.isUuid(field.id) ? field.id : const Uuid().v4(),
+      userName: userName,
+      fieldNumber: field.fieldNumber > 0 ? field.fieldNumber : (_fields.length + 1),
+    );
+
+    final saved = await _fieldStorageService.addField(
+      [],
+      farmField,
+      fid: fidToUse,
+      userName: userName,
+    );
+
+    final newCropField = CropField.fromFarmField(saved);
+    _fields.add(newCropField);
+
     _addNotification(
       title: 'New Field Registered',
-      description: 'Field "${field.name}" was successfully registered under monitoring.',
+      description: 'Field "${newCropField.name}" (#${newCropField.fieldNumber}) was successfully registered and saved.',
       isCritical: false,
     );
     notifyListeners();
   }
 
-  void editField(CropField updatedField) {
+  void editField(CropField updatedField) async {
     final idx = _fields.indexWhere((f) => f.id == updatedField.id);
     if (idx != -1) {
       _fields[idx] = updatedField;
+
+      final farmField = FarmField.fromCropField(updatedField);
+      final fidToUse = currentFid;
+      final userName = _currentProfile?.name ?? updatedField.userName ?? 'Farmer';
+      await _fieldStorageService.updateField([], farmField, fid: fidToUse, userName: userName);
+
       notifyListeners();
     }
   }
 
-  void deleteField(String fieldId) {
+  void deleteField(String fieldId) async {
     _fields.removeWhere((f) => f.id == fieldId);
     _scans.removeWhere((s) => s.fieldId == fieldId);
     _actions.removeWhere((a) => a.fieldId == fieldId);
+
+    await _fieldStorageService.deleteField([], fieldId);
     notifyListeners();
   }
 
   // --- Drone Scan Bookings & Lifecycle ---
-  void requestDroneScan({
+  Future<void> requestDroneScan({
     required String fieldId,
     required String scanType,
     required String date,
     required String time,
-  }) {
-    final field = _fields.firstWhere((f) => f.id == fieldId);
-    final newScan = DroneScan(
-      id: 'scan_${DateTime.now().millisecondsSinceEpoch}',
+    DateTime? bookingDatetime,
+  }) async {
+    final fidToUse = currentFid ?? 'demo_farmer_id';
+    
+    String? fieldName;
+    try {
+      final field = _fields.firstWhere((f) => f.id == fieldId);
+      fieldName = field.name;
+    } catch (_) {}
+
+    DateTime finalDateTime = bookingDatetime ?? DateTime.now();
+    if (bookingDatetime == null) {
+      try {
+        final parsedDate = DateTime.tryParse(date);
+        if (parsedDate != null) {
+          finalDateTime = parsedDate;
+        }
+      } catch (_) {}
+    }
+
+    final newScan = await _bookingService.createBooking(
+      fid: fidToUse,
       fieldId: fieldId,
+      fieldName: fieldName,
       scanType: scanType,
-      date: date,
-      time: time,
-      operatorName: 'Pending Assignment',
-      status: DroneScanStatus.requested,
-      verificationStatus: 'PENDING',
+      bookingDatetime: finalDateTime,
+      status: 'Pending',
     );
-    _scans.insert(0, newScan);
+
+    if (newScan != null) {
+      _scans.insert(0, newScan);
+    }
+
+    final displayName = fieldName ?? 'Field';
+
     _addNotification(
       title: 'Drone Scan Requested',
-      description: 'A $scanType scan has been requested for ${field.name} on $date.',
+      description: 'A $scanType scan has been requested for $displayName on $date.',
       isCritical: false,
     );
     notifyListeners();
   }
 
   // Operator Actions
-  void operatorAcceptScan(String scanId, String operatorName) {
+  void operatorAcceptScan(String scanId, String operatorName) async {
     final idx = _scans.indexWhere((s) => s.id == scanId);
     if (idx != -1) {
       _scans[idx] = _scans[idx].copyWith(
         status: DroneScanStatus.droneAssigned,
         operatorName: operatorName,
       );
+
+      await _bookingService.updateBookingStatus(
+        scanId,
+        DroneScanStatus.droneAssigned,
+        operatorName: operatorName,
+      );
+
       _addNotification(
         title: 'Drone Pilot Assigned',
         description: '$operatorName has accepted the scan request.',
@@ -304,30 +696,47 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void operatorStartScan(String scanId) {
+  void operatorStartScan(String scanId) async {
     final idx = _scans.indexWhere((s) => s.id == scanId);
     if (idx != -1) {
       _scans[idx] = _scans[idx].copyWith(
         status: DroneScanStatus.inProgress,
       );
+
+      await _bookingService.updateBookingStatus(
+        scanId,
+        DroneScanStatus.inProgress,
+      );
       notifyListeners();
     }
   }
 
-  void operatorCompleteScan(String scanId) {
+  void operatorCompleteScan(String scanId) async {
     final idx = _scans.indexWhere((s) => s.id == scanId);
     if (idx != -1) {
       _scans[idx] = _scans[idx].copyWith(
         status: DroneScanStatus.processing,
       );
-      // Simulate quick processing and AI Analysis pipeline automatically
-      Future.delayed(const Duration(seconds: 1), () {
+
+      await _bookingService.updateBookingStatus(
+        scanId,
+        DroneScanStatus.processing,
+      );
+
+      Future.delayed(const Duration(seconds: 1), () async {
         final scanIdx = _scans.indexWhere((s) => s.id == scanId);
         if (scanIdx != -1) {
           _scans[scanIdx] = _scans[scanIdx].copyWith(
             status: DroneScanStatus.aiAnalysis,
             verificationStatus: 'UNDER REVIEW',
           );
+
+          await _bookingService.updateBookingStatus(
+            scanId,
+            DroneScanStatus.aiAnalysis,
+            verificationStatus: 'UNDER REVIEW',
+          );
+
           _addNotification(
             title: 'Scan AI Processing Complete',
             description: 'Drone data has been parsed. Report sent to Expert for verification.',
@@ -341,25 +750,30 @@ class AppState extends ChangeNotifier {
   }
 
   // Expert/Admin Actions
-  void adminVerifyReport(String scanId, String verificationStatus, {int? healthScore}) {
+  void adminVerifyReport(String scanId, String verificationStatus, {int? healthScore}) async {
     final idx = _scans.indexWhere((s) => s.id == scanId);
     if (idx != -1) {
       final finalHealth = healthScore ?? _scans[idx].healthScore;
-      
+
       _scans[idx] = _scans[idx].copyWith(
         status: DroneScanStatus.reportReady,
         verificationStatus: verificationStatus,
         healthScore: finalHealth,
       );
 
-      // Notify Farmer
+      await _bookingService.updateBookingStatus(
+        scanId,
+        DroneScanStatus.reportReady,
+        verificationStatus: verificationStatus,
+        healthScore: finalHealth,
+      );
+
       _addNotification(
         title: 'Field Intelligence Report Ready',
         description: 'Verification complete ($verificationStatus) for scan on ${_scans[idx].date}. Health: $finalHealth/100.',
         isCritical: true,
       );
 
-      // If the scan was on Field A, and we had recorded action "Irrigated Zone 2", we trigger the IMPROVEMENT lifecycle!
       if (_scans[idx].fieldId == 'field_a') {
         _applyIrrigationOutcome();
       }
@@ -408,19 +822,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Demo Scenario: Before -> Action -> After Verification loop ---
   void _applyIrrigationOutcome() {
-    // Check if the user irrigated Zone 2 of Field A
     final hasIrrigatedZone2 = _actions.any(
-      (a) => a.fieldId == 'field_a' && a.zoneName == 'Zone 2' && a.title.contains('Irrigation')
+      (a) => a.fieldId == 'field_a' && a.zoneName == 'Zone 2' && a.title.contains('Irrigation'),
     );
 
     if (hasIrrigatedZone2) {
       final fieldIdx = _fields.indexWhere((f) => f.id == 'field_a');
       if (fieldIdx != -1) {
         final field = _fields[fieldIdx];
-        
-        // Update Zone 2 stats
+
         final updatedZones = field.zones.map((z) {
           if (z.id == 'z2') {
             return z.copyWith(
@@ -434,7 +845,6 @@ class AppState extends ChangeNotifier {
           return z;
         }).toList();
 
-        // Update Soil Moisture Sensor
         final updatedSensors = field.sensors.map((s) {
           if (s.sensorName == 'Soil Moisture') {
             final newHistory = List<double>.from(s.history)..add(48.0);
@@ -447,7 +857,6 @@ class AppState extends ChangeNotifier {
           return s;
         }).toList();
 
-        // Update Field Metrics
         _fields[fieldIdx] = field.copyWith(
           healthScore: 82,
           prevHealthScore: 78,
@@ -458,9 +867,8 @@ class AppState extends ChangeNotifier {
           sensors: updatedSensors,
         );
 
-        // Update the Action outcome mapping
         final actionIdx = _actions.indexWhere(
-          (a) => a.fieldId == 'field_a' && a.zoneName == 'Zone 2' && a.title.contains('Irrigation')
+          (a) => a.fieldId == 'field_a' && a.zoneName == 'Zone 2' && a.title.contains('Irrigation'),
         );
         if (actionIdx != -1) {
           _actions[actionIdx] = _actions[actionIdx].copyWith(
@@ -472,7 +880,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- Seed Initial Datasets ---
+  // --- Seed Initial Fallback Datasets ---
   void _initializeData() {
     _currentLanguage = 'en';
     _currentRole = 'FARMER';
@@ -490,7 +898,6 @@ class AppState extends ChangeNotifier {
       mainCrop: 'Cotton',
     );
 
-    // 1. Fields
     _fields = [
       CropField(
         id: 'field_a',
@@ -662,56 +1069,8 @@ class AppState extends ChangeNotifier {
           ),
         ],
       ),
-      CropField(
-        id: 'field_c',
-        name: 'Field C (Wheat)',
-        crop: 'Wheat',
-        area: 4.0,
-        areaUnit: 'acres',
-        sowingDate: '2026-08-10',
-        cropStage: 'Germination stage',
-        healthScore: 91,
-        prevHealthScore: 89,
-        lastScanDate: '25 Aug',
-        moistureStatus: 'NORMAL',
-        activeAlerts: [],
-        zones: [
-          Zone(
-            id: 'zc1',
-            name: 'Zone 1',
-            status: 'Healthy',
-            moisture: 55.0,
-            temperature: 26.0,
-            risk: 'None',
-            aiExplanation: 'Germination sprouting evenly distributed.',
-            recommendation: 'Maintain irrigation cycle.',
-          ),
-          Zone(
-            id: 'zc2',
-            name: 'Zone 2',
-            status: 'Healthy',
-            moisture: 55.0,
-            temperature: 26.0,
-            risk: 'None',
-            aiExplanation: 'Sprouting healthy.',
-            recommendation: 'Maintain cycle.',
-          ),
-        ],
-        sensors: [
-          SensorReading(
-            sensorName: 'Soil Moisture',
-            currentValue: 55.0,
-            minNormal: 40.0,
-            maxNormal: 70.0,
-            unit: '%',
-            status: 'NORMAL',
-            history: [52.0, 53.0, 54.0, 55.0],
-          ),
-        ],
-      )
     ];
 
-    // 2. Drone Scans
     _scans = [
       DroneScan(
         id: 'scan_a1',
@@ -735,20 +1094,8 @@ class AppState extends ChangeNotifier {
         verificationStatus: 'VERIFIED',
         healthScore: 84,
       ),
-      DroneScan(
-        id: 'scan_c1',
-        fieldId: 'field_c',
-        scanType: 'Moisture/Soil Scan',
-        date: '2026-08-25',
-        time: '07:45 AM',
-        operatorName: 'Amit Patil',
-        status: DroneScanStatus.reportReady,
-        verificationStatus: 'VERIFIED',
-        healthScore: 91,
-      ),
     ];
 
-    // 3. Actions
     _actions = [
       ActionEntry(
         id: 'action_p1',
@@ -760,19 +1107,8 @@ class AppState extends ChangeNotifier {
         notes: 'Manually inspected tomato leaf spots. Copper fungicide scheduled.',
         isCompleted: true,
       ),
-      ActionEntry(
-        id: 'action_p2',
-        fieldId: 'field_a',
-        title: 'Nitrogen Applicator',
-        category: 'Nutrient',
-        zoneName: 'Zone 3',
-        date: '2026-08-22',
-        notes: 'Hand spread urea mixture to counter discoloration.',
-        isCompleted: true,
-      ),
     ];
 
-    // 4. Weather
     _weatherForecast = [
       WeatherForecast(
         dayName: 'Today',
@@ -783,7 +1119,7 @@ class AppState extends ChangeNotifier {
         windSpeed: 8.0,
         weatherCondition: 'Sunny',
         sprayingCondition: 'GOOD',
-        aiSummary: 'Excellent spraying window. The low wind speed and minimal precipitation risk prevent drift and product wash-off.',
+        aiSummary: 'Excellent spraying window. Low wind speed and minimal precipitation risk.',
         bestWindow: 'Tomorrow 6:00 AM – 9:00 AM',
       ),
       WeatherForecast(
@@ -795,182 +1131,22 @@ class AppState extends ChangeNotifier {
         windSpeed: 14.0,
         weatherCondition: 'Rainy',
         sprayingCondition: 'AVOID',
-        aiSummary: 'Avoid spraying operations today. Heavy rain showers expected in the afternoon will wash away inputs.',
+        aiSummary: 'Avoid spraying operations today. Heavy rain expected in afternoon.',
         bestWindow: 'None',
       ),
-      WeatherForecast(
-        dayName: 'Fri',
-        date: '28 Aug',
-        temperature: 29.0,
-        rainProbability: 45.0,
-        humidity: 78.0,
-        windSpeed: 12.0,
-        weatherCondition: 'Cloudy',
-        sprayingCondition: 'MODERATE',
-        aiSummary: 'Moderate condition. Rain probability is high in evening. Use rain-fastness adjuvant if urgent spray is needed.',
-        bestWindow: '06:00 AM - 09:00 AM',
-      ),
-      WeatherForecast(
-        dayName: 'Sat',
-        date: '29 Aug',
-        temperature: 31.0,
-        rainProbability: 15.0,
-        humidity: 62.0,
-        windSpeed: 9.0,
-        weatherCondition: 'Sunny',
-        sprayingCondition: 'GOOD',
-        aiSummary: 'Weather returns to dry and clear. Spraying conditions are good.',
-        bestWindow: '07:00 AM - 10:30 AM',
-      ),
-      WeatherForecast(
-        dayName: 'Sun',
-        date: '30 Aug',
-        temperature: 33.0,
-        rainProbability: 5.0,
-        humidity: 55.0,
-        windSpeed: 7.0,
-        weatherCondition: 'Sunny',
-        sprayingCondition: 'GOOD',
-        aiSummary: 'Low humidity and calm wind speeds create optimal spraying conditions.',
-        bestWindow: '06:00 AM - 10:00 AM',
-      ),
-      WeatherForecast(
-        dayName: 'Mon',
-        date: '31 Aug',
-        temperature: 32.0,
-        rainProbability: 20.0,
-        humidity: 68.0,
-        windSpeed: 10.0,
-        weatherCondition: 'Cloudy',
-        sprayingCondition: 'GOOD',
-        aiSummary: 'Overcast skies and pleasant winds offer comfortable application window.',
-        bestWindow: '08:00 AM - 11:00 AM',
-      ),
     ];
 
-    // 5. Library Items
-    _libraryCrops = [
-      LibraryItem(
-        id: 'lc_1',
-        type: 'Crop',
-        name: 'Cotton',
-        description: 'Cotton is a soft, fluffy staple fiber that grows in a boll, or protective case, around the seeds of the cotton plants of the genus Gossypium.',
-        details: [
-          'Optimal Temperature: 21°C to 30°C',
-          'Sowing Period: May - June',
-          'Irrigation Requirement: Moderate (sensitive to waterlogging)',
-          'Fertilization: High requirements of Nitrogen and Potassium during flowering stage.',
-          'Growth Stages: Germination, Vegetative, Squaring, Flowering, Boll Development, Harvest.'
-        ],
-        affectedCrops: ['Cotton'],
-      ),
-      LibraryItem(
-        id: 'lc_2',
-        type: 'Crop',
-        name: 'Tomato',
-        description: 'Tomatoes are warm-season crops that require ample sunlight and well-draining organic soil to flourish.',
-        details: [
-          'Optimal Temperature: 18°C to 27°C',
-          'Sowing Period: June - July / Nov - Dec',
-          'Growth Stages: Seedling, Vegetative, Flowering, Fruit set, Ripening.'
-        ],
-        affectedCrops: ['Tomato'],
-      ),
-      LibraryItem(
-        id: 'lc_3',
-        type: 'Crop',
-        name: 'Wheat',
-        description: 'Wheat is a cereal grain, originally from the Levant region of the Near East but now cultivated worldwide.',
-        details: [
-          'Optimal Temperature: 12°C to 25°C',
-          'Sowing Period: October - December',
-          'Growth Stages: Germination, Tillering, Jointing, Heading, Milking, Ripening.'
-        ],
-        affectedCrops: ['Wheat'],
-      ),
-    ];
-
-    _libraryPests = [
-      LibraryItem(
-        id: 'lp_1',
-        type: 'Pest',
-        name: 'Pink Bollworm',
-        description: 'The pink bollworm is an insect known for being a pest in cotton farming.',
-        details: [
-          'Symptoms: Double flowers, boll boring holes, stained lint production.',
-          'Prevention: Crop rotation, pheromone traps installation.',
-          'Management: Apply Neem oil sprays, release parasitoid Trichogramma, or localized insecticide applications strictly based on labels.'
-        ],
-        affectedCrops: ['Cotton'],
-      ),
-      LibraryItem(
-        id: 'lp_2',
-        type: 'Pest',
-        name: 'Tomato Fruit Borer',
-        description: 'A major insect pest feeding inside tomato fruits, rendering them unmarketable.',
-        details: [
-          'Symptoms: Circular boring holes on fruits, internal pulp rot.',
-          'Management: Hand-picking infected fruits, installing pheromone lures.'
-        ],
-        affectedCrops: ['Tomato'],
-      ),
-    ];
-
-    _libraryDiseases = [
-      LibraryItem(
-        id: 'ld_1',
-        type: 'Disease',
-        name: 'Early Blight',
-        description: 'Early Blight is a common fungal disease of tomato plants caused by Alternaria solani.',
-        details: [
-          'Symptoms: Concentric dark brown circles resembling targets on leaves and stems.',
-          'Prevention: Crop rotation, drip irrigation to keep foliage dry, clear plant residues.',
-          'Management: Apply copper-based organic fungicides early during vegetative stages. Follow product labeling.'
-        ],
-        affectedCrops: ['Tomato'],
-      ),
-      LibraryItem(
-        id: 'ld_2',
-        type: 'Disease',
-        name: 'Cotton Leaf Curl Virus',
-        description: 'A destructive viral infection transmitted by whiteflies leading to leaf deformation.',
-        details: [
-          'Symptoms: Upward curling of leaf margins, leaf thickening, stunted growth.',
-          'Prevention: Plant resistant varieties, manage vector whitefly populations.'
-        ],
-        affectedCrops: ['Cotton'],
-      ),
-    ];
-
-    // 6. Notifications
     _notifications = [
       NotificationItem(
         id: 'not_1',
-        title: 'Action Item: Check Zone 2 Irrigation',
-        description: 'Field A soil moisture has fallen below 28%. Action is recommended.',
+        title: 'Low Moisture Alert: Field A',
+        description: 'Field A soil moisture has fallen below 28%. Action recommended.',
         time: '2 hours ago',
         isRead: false,
         isCritical: true,
       ),
-      NotificationItem(
-        id: 'not_2',
-        title: 'Drone Report Verified',
-        description: 'Expert Rajesh verified Field B Tomato report. Condition: Moderate.',
-        time: '1 day ago',
-        isRead: true,
-        isCritical: false,
-      ),
-      NotificationItem(
-        id: 'not_3',
-        title: 'Weather Warning: High Rain Risk',
-        description: 'Heavy precipitation forecast for tomorrow (75% probability). Avoid spraying.',
-        time: '1 day ago',
-        isRead: false,
-        isCritical: true,
-      ),
     ];
 
-    // Initialize Soil Health Card demo data
     _soilHealthCards = SoilHealthCardDemoData.demoCards;
   }
 

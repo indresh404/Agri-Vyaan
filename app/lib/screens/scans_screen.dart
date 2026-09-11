@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 
@@ -21,7 +22,7 @@ class ScansScreen extends StatefulWidget {
               const Text('Drone Delivery Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
-          content: Container(
+          content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
               child: Column(
@@ -98,7 +99,7 @@ class ScansScreen extends StatefulWidget {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
@@ -107,7 +108,7 @@ class ScansScreen extends StatefulWidget {
               Container(
                 width: 2,
                 height: 35,
-                color: color == Colors.grey ? Colors.grey.shade300 : color.withOpacity(0.5),
+                color: color == Colors.grey ? Colors.grey.shade300 : color.withValues(alpha: 0.5),
               ),
           ],
         ),
@@ -147,8 +148,9 @@ class ScansScreen extends StatefulWidget {
 
     String? selectedFieldId = appState.fields.first.id;
     String selectedScanType = 'Crop Health Scan';
-    final dateController = TextEditingController(text: '2026-08-27');
-    final timeController = TextEditingController(text: '10:00 AM');
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    bool isSaving = false;
 
     showModalBottomSheet(
       context: context,
@@ -159,6 +161,9 @@ class ScansScreen extends StatefulWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
+            final timeStr = selectedTime.format(context);
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -179,9 +184,9 @@ class ScansScreen extends StatefulWidget {
                   // Field Dropdown
                   DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: selectedFieldId,
+                    initialValue: selectedFieldId,
                     items: appState.fields
-                        .map((f) => DropdownMenuItem(value: f.id, child: Text(f.name)))
+                        .map((f) => DropdownMenuItem(value: f.id, child: Text('${f.name} (${f.crop})')))
                         .toList(),
                     onChanged: (val) {
                       setModalState(() {
@@ -195,7 +200,7 @@ class ScansScreen extends StatefulWidget {
                   // Scan Type Dropdown
                   DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: selectedScanType,
+                    initialValue: selectedScanType,
                     items: const [
                       DropdownMenuItem(value: 'Crop Health Scan', child: Text('Crop Health Scan')),
                       DropdownMenuItem(value: 'Moisture/Soil Scan', child: Text('Moisture/Soil Scan')),
@@ -210,20 +215,54 @@ class ScansScreen extends StatefulWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Date & Time entries
+                  // Date & Time pickers
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: dateController,
-                          decoration: const InputDecoration(labelText: 'Target Date'),
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 90)),
+                            );
+                            if (picked != null) {
+                              setModalState(() {
+                                selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Target Date',
+                              suffixIcon: Icon(Icons.calendar_today, size: 18),
+                            ),
+                            child: Text(dateStr),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextField(
-                          controller: timeController,
-                          decoration: const InputDecoration(labelText: 'Target Time'),
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: selectedTime,
+                            );
+                            if (picked != null) {
+                              setModalState(() {
+                                selectedTime = picked;
+                              });
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Target Time',
+                              suffixIcon: Icon(Icons.access_time, size: 18),
+                            ),
+                            child: Text(timeStr),
+                          ),
                         ),
                       ),
                     ],
@@ -234,27 +273,47 @@ class ScansScreen extends StatefulWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: isSaving ? null : () => Navigator.pop(context),
                           child: const Text('Cancel'),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (selectedFieldId != null) {
-                              appState.requestDroneScan(
-                                fieldId: selectedFieldId!,
-                                scanType: selectedScanType,
-                                date: dateController.text,
-                                time: timeController.text,
-                              );
-                              Navigator.pop(context);
-                              showDroneTimelineDialog(context, selectedScanType);
-                            }
-                          },
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (selectedFieldId != null) {
+                                    setModalState(() => isSaving = true);
+                                    final combinedDatetime = DateTime(
+                                      selectedDate.year,
+                                      selectedDate.month,
+                                      selectedDate.day,
+                                      selectedTime.hour,
+                                      selectedTime.minute,
+                                    );
+
+                                    await appState.requestDroneScan(
+                                      fieldId: selectedFieldId!,
+                                      scanType: selectedScanType,
+                                      date: dateStr,
+                                      time: timeStr,
+                                      bookingDatetime: combinedDatetime,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      showDroneTimelineDialog(context, selectedScanType);
+                                    }
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-                          child: const Text('Confirm Booking', style: TextStyle(color: Colors.white)),
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('Confirm Booking', style: TextStyle(color: Colors.white)),
                         ),
                       ),
                     ],
@@ -271,11 +330,6 @@ class ScansScreen extends StatefulWidget {
 }
 
 class _ScansScreenState extends State<ScansScreen> {
-  String? _selectedFieldId;
-  String _selectedScanType = 'Crop Health Scan';
-  final _dateController = TextEditingController(text: '2026-08-27');
-  final _timeController = TextEditingController(text: '10:00 AM');
-
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);

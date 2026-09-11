@@ -7,6 +7,7 @@ class FarmerProfile {
   final double farmArea;
   final String areaUnit; // acres or hectares
   final String mainCrop;
+  final String? fid;
 
   FarmerProfile({
     required this.name,
@@ -17,7 +18,35 @@ class FarmerProfile {
     required this.farmArea,
     required this.areaUnit,
     required this.mainCrop,
+    this.fid,
   });
+
+  factory FarmerProfile.fromMap(Map<String, dynamic> json) {
+    return FarmerProfile(
+      name: (json['name'] ?? json['Name'] ?? 'Farmer').toString(),
+      phone: (json['phone_no'] ?? json['phone'] ?? json['Phone no'] ?? json['Phone'] ?? '').toString(),
+      email: (json['email'] ?? 'farmer@agrivyaan.com').toString(),
+      preferredLanguage: (json['preferred_language'] ?? json['preferredLanguage'] ?? 'en').toString(),
+      location: (json['location'] ?? json['Location'] ?? 'Wardha, Maharashtra').toString(),
+      farmArea: (json['farm_area'] ?? json['farmArea'] as num?)?.toDouble() ?? 5.0,
+      areaUnit: (json['area_unit'] ?? json['areaUnit'] ?? 'acres').toString(),
+      mainCrop: (json['main_crop'] ?? json['mainCrop'] ?? 'Cotton').toString(),
+      fid: (json['fid'] ?? json['FID'] ?? json['auth_id'] ?? json['id'])?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap(String? authId) {
+    // Only columns that exist in the public.users table: phone_no, name, location, auth_id
+    final map = <String, dynamic>{
+      'phone_no': phone,
+      'name': name,
+      'location': location.isNotEmpty ? location : null,
+    };
+    if (authId != null && authId.isNotEmpty) {
+      map['auth_id'] = authId;
+    }
+    return map;
+  }
 
   FarmerProfile copyWith({
     String? name,
@@ -28,6 +57,7 @@ class FarmerProfile {
     double? farmArea,
     String? areaUnit,
     String? mainCrop,
+    String? fid,
   }) {
     return FarmerProfile(
       name: name ?? this.name,
@@ -38,9 +68,11 @@ class FarmerProfile {
       farmArea: farmArea ?? this.farmArea,
       areaUnit: areaUnit ?? this.areaUnit,
       mainCrop: mainCrop ?? this.mainCrop,
+      fid: fid ?? this.fid,
     );
   }
 }
+
 
 class Zone {
   final String id;
@@ -156,7 +188,10 @@ extension DroneScanStatusExtension on DroneScanStatus {
 
 class DroneScan {
   final String id;
+  final String? fid;
   final String fieldId;
+  final String? fieldName;
+  final DateTime? bookingDatetime;
   final String scanType; // Crop Health Scan, Moisture/Soil Scan, Full Field Analysis
   final String date;
   final String time;
@@ -168,7 +203,10 @@ class DroneScan {
 
   DroneScan({
     required this.id,
+    this.fid,
     required this.fieldId,
+    this.fieldName,
+    this.bookingDatetime,
     required this.scanType,
     required this.date,
     required this.time,
@@ -180,6 +218,14 @@ class DroneScan {
   });
 
   DroneScan copyWith({
+    String? id,
+    String? fid,
+    String? fieldId,
+    String? fieldName,
+    DateTime? bookingDatetime,
+    String? scanType,
+    String? date,
+    String? time,
     DroneScanStatus? status,
     String? verificationStatus,
     int? healthScore,
@@ -187,11 +233,14 @@ class DroneScan {
     String? operatorName,
   }) {
     return DroneScan(
-      id: this.id,
-      fieldId: this.fieldId,
-      scanType: this.scanType,
-      date: this.date,
-      time: this.time,
+      id: id ?? this.id,
+      fid: fid ?? this.fid,
+      fieldId: fieldId ?? this.fieldId,
+      fieldName: fieldName ?? this.fieldName,
+      bookingDatetime: bookingDatetime ?? this.bookingDatetime,
+      scanType: scanType ?? this.scanType,
+      date: date ?? this.date,
+      time: time ?? this.time,
       operatorName: operatorName ?? this.operatorName,
       status: status ?? this.status,
       verificationStatus: verificationStatus ?? this.verificationStatus,
@@ -204,9 +253,13 @@ class DroneScan {
 class CropField {
   final String id;
   final String name;
+  final int fieldNumber;
+  final String? userName;
   final String crop;
   final double area;
   final String areaUnit;
+  final double latitude;
+  final double longitude;
   final String sowingDate;
   final String cropStage; // Germination, Vegetative, Flowering, Fruiting, Harvest
   final int healthScore;
@@ -216,13 +269,18 @@ class CropField {
   final List<Zone> zones;
   final List<SensorReading> sensors;
   final List<String> activeAlerts;
+  final String? location; // e.g. 'Lat: 20.7453, Long: 78.6022'
 
   CropField({
     required this.id,
     required this.name,
+    this.fieldNumber = 1,
+    this.userName,
     required this.crop,
     required this.area,
     required this.areaUnit,
+    this.latitude = 20.7453,
+    this.longitude = 78.6022,
     required this.sowingDate,
     required this.cropStage,
     required this.healthScore,
@@ -232,6 +290,7 @@ class CropField {
     required this.zones,
     required this.sensors,
     required this.activeAlerts,
+    this.location,
   });
 
   factory CropField.fromFarmField(dynamic f) {
@@ -282,12 +341,19 @@ class CropField {
         history: [f.humidity - 5, f.humidity - 2, f.humidity],
       );
 
+      final latVal = (f.latitude as num?)?.toDouble() ?? 20.7453;
+      final lngVal = (f.longitude as num?)?.toDouble() ?? 78.6022;
+
       return CropField(
         id: f.id as String,
         name: f.name as String,
+        fieldNumber: (f.fieldNumber as int?) ?? 1,
+        userName: f.userName as String?,
         crop: f.crop as String,
         area: (f.area as num).toDouble(),
         areaUnit: 'acres',
+        latitude: latVal,
+        longitude: lngVal,
         sowingDate: f.sowingDate.toString().split(' ').first,
         cropStage: 'Vegetative stage',
         healthScore: f.healthScore.toInt(),
@@ -297,14 +363,19 @@ class CropField {
         zones: zonesList,
         sensors: [moistureSensor, tempSensor, humiditySensor],
         activeAlerts: alertsList,
+        location: f.location as String?,
       );
     } catch (_) {
       return CropField(
         id: f.id as String,
         name: f.name as String,
+        fieldNumber: (f.fieldNumber as int?) ?? 1,
+        userName: f.userName as String?,
         crop: f.crop as String,
         area: (f.area as num).toDouble(),
         areaUnit: 'acres',
+        latitude: 20.7453,
+        longitude: 78.6022,
         sowingDate: '2026-08-26',
         cropStage: 'Vegetative stage',
         healthScore: f.healthScore.toInt(),
@@ -319,10 +390,15 @@ class CropField {
   }
 
   CropField copyWith({
+    String? id,
     String? name,
+    int? fieldNumber,
+    String? userName,
     String? crop,
     double? area,
     String? areaUnit,
+    double? latitude,
+    double? longitude,
     String? sowingDate,
     String? cropStage,
     int? healthScore,
@@ -332,13 +408,18 @@ class CropField {
     List<Zone>? zones,
     List<SensorReading>? sensors,
     List<String>? activeAlerts,
+    String? location,
   }) {
     return CropField(
-      id: this.id,
+      id: id ?? this.id,
       name: name ?? this.name,
+      fieldNumber: fieldNumber ?? this.fieldNumber,
+      userName: userName ?? this.userName,
       crop: crop ?? this.crop,
       area: area ?? this.area,
       areaUnit: areaUnit ?? this.areaUnit,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       sowingDate: sowingDate ?? this.sowingDate,
       cropStage: cropStage ?? this.cropStage,
       healthScore: healthScore ?? this.healthScore,
@@ -348,6 +429,7 @@ class CropField {
       zones: zones ?? this.zones,
       sensors: sensors ?? this.sensors,
       activeAlerts: activeAlerts ?? this.activeAlerts,
+      location: location ?? this.location,
     );
   }
 }
