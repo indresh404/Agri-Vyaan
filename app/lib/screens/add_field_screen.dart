@@ -563,7 +563,7 @@ class _AddFieldScreenState extends State<AddFieldScreen> {
                               ],
                             )
                           : Text(
-                              _isEditMode ? 'Save Changes' : 'Save Field to Cloud',
+                              _isEditMode ? 'Save Changes' : 'Save Field',
                               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                     ),

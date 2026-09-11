@@ -624,30 +624,49 @@ class AppState extends ChangeNotifier {
   }
 
   // --- Drone Scan Bookings & Lifecycle ---
-  void requestDroneScan({
+  Future<void> requestDroneScan({
     required String fieldId,
     required String scanType,
     required String date,
     required String time,
+    DateTime? bookingDatetime,
   }) async {
     final fidToUse = currentFid ?? 'demo_farmer_id';
+    
+    String? fieldName;
+    try {
+      final field = _fields.firstWhere((f) => f.id == fieldId);
+      fieldName = field.name;
+    } catch (_) {}
+
+    DateTime finalDateTime = bookingDatetime ?? DateTime.now();
+    if (bookingDatetime == null) {
+      try {
+        final parsedDate = DateTime.tryParse(date);
+        if (parsedDate != null) {
+          finalDateTime = parsedDate;
+        }
+      } catch (_) {}
+    }
+
     final newScan = await _bookingService.createBooking(
       fid: fidToUse,
       fieldId: fieldId,
+      fieldName: fieldName,
       scanType: scanType,
-      date: date,
-      time: time,
+      bookingDatetime: finalDateTime,
+      status: 'Pending',
     );
 
     if (newScan != null) {
       _scans.insert(0, newScan);
     }
 
-    final fieldName = _fields.firstWhere((f) => f.id == fieldId, orElse: () => _fields.first).name;
+    final displayName = fieldName ?? 'Field';
 
     _addNotification(
       title: 'Drone Scan Requested',
-      description: 'A $scanType scan has been requested for $fieldName on $date.',
+      description: 'A $scanType scan has been requested for $displayName on $date.',
       isCritical: false,
     );
     notifyListeners();
