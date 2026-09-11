@@ -96,12 +96,17 @@ class FieldImprovement {
       );
 }
 
-/// Main data model representing a farm field.
+/// Main data model representing a farm field matching public.fields schema.
 class FarmField {
-  final String id;
-  final String name;
-  final String crop;
-  final double area; // in acres
+  final String id; // fieldid
+  final String? fid; // fid (foreign key to users)
+  final String userName; // user_name
+  final String name; // field_name
+  final int fieldNumber; // field_number
+  final String crop; // crop_name
+  final double area; // area
+  final double latitude; // latitude
+  final double longitude; // longitude
   final String location;
   final DateTime sowingDate;
   final String? notes;
@@ -117,9 +122,14 @@ class FarmField {
 
   const FarmField({
     required this.id,
+    this.fid,
+    this.userName = 'Farmer',
     required this.name,
+    this.fieldNumber = 1,
     required this.crop,
     required this.area,
+    this.latitude = 20.7453,
+    this.longitude = 78.6022,
     required this.location,
     required this.sowingDate,
     this.notes,
@@ -136,9 +146,14 @@ class FarmField {
 
   FarmField copyWith({
     String? id,
+    String? fid,
+    String? userName,
     String? name,
+    int? fieldNumber,
     String? crop,
     double? area,
+    double? latitude,
+    double? longitude,
     String? location,
     DateTime? sowingDate,
     String? notes,
@@ -154,9 +169,14 @@ class FarmField {
   }) {
     return FarmField(
       id: id ?? this.id,
+      fid: fid ?? this.fid,
+      userName: userName ?? this.userName,
       name: name ?? this.name,
+      fieldNumber: fieldNumber ?? this.fieldNumber,
       crop: crop ?? this.crop,
       area: area ?? this.area,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       location: location ?? this.location,
       sowingDate: sowingDate ?? this.sowingDate,
       notes: notes ?? this.notes,
@@ -174,9 +194,19 @@ class FarmField {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'fieldid': id,
+    'fid': fid,
+    'userName': userName,
+    'user_name': userName,
     'name': name,
+    'field_name': name,
+    'fieldNumber': fieldNumber,
+    'field_number': fieldNumber,
     'crop': crop,
+    'crop_name': crop,
     'area': area,
+    'latitude': latitude,
+    'longitude': longitude,
     'location': location,
     'sowingDate': sowingDate.toIso8601String(),
     'notes': notes,
@@ -192,18 +222,23 @@ class FarmField {
   };
 
   factory FarmField.fromJson(Map<String, dynamic> json) => FarmField(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    crop: json['crop'] as String,
-    area: (json['area'] as num).toDouble(),
-    location: json['location'] as String,
-    sowingDate: DateTime.parse(json['sowingDate'] as String),
+    id: (json['fieldid'] ?? json['id'] ?? '').toString(),
+    fid: json['fid']?.toString(),
+    userName: (json['user_name'] ?? json['userName'] ?? 'Farmer').toString(),
+    name: (json['field_name'] ?? json['name'] ?? 'Field').toString(),
+    fieldNumber: (json['field_number'] ?? json['fieldNumber'] as num?)?.toInt() ?? 1,
+    crop: (json['crop_name'] ?? json['crop'] ?? 'Cotton').toString(),
+    area: (json['area'] as num?)?.toDouble() ?? 1.0,
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 20.7453,
+    longitude: (json['longitude'] as num?)?.toDouble() ?? 78.6022,
+    location: (json['location'] ?? 'Lat: ${json['latitude'] ?? 20.7453}, Long: ${json['longitude'] ?? 78.6022}').toString(),
+    sowingDate: DateTime.tryParse(json['sowingDate'] ?? json['sowing_date'] ?? '') ?? DateTime.now(),
     notes: json['notes'] as String?,
-    healthScore: (json['healthScore'] as num).toDouble(),
-    soilMoisture: (json['soilMoisture'] as num).toDouble(),
-    temperature: (json['temperature'] as num).toDouble(),
-    humidity: (json['humidity'] as num).toDouble(),
-    lastScan: DateTime.parse(json['lastScan'] as String),
+    healthScore: (json['healthScore'] ?? json['health_score'] as num?)?.toDouble() ?? 80.0,
+    soilMoisture: (json['soilMoisture'] ?? json['soil_moisture'] as num?)?.toDouble() ?? 50.0,
+    temperature: (json['temperature'] as num?)?.toDouble() ?? 28.0,
+    humidity: (json['humidity'] as num?)?.toDouble() ?? 60.0,
+    lastScan: DateTime.tryParse(json['lastScan'] ?? json['last_scan'] ?? '') ?? DateTime.now(),
     zones: (json['zones'] as List?)
             ?.map((z) => FieldZone.fromJson(z as Map<String, dynamic>))
             .toList() ??
@@ -246,10 +281,14 @@ class FarmField {
 
       return FarmField(
         id: c.id as String,
+        userName: (c.userName as String?) ?? 'Farmer',
         name: c.name as String,
+        fieldNumber: (c.fieldNumber as int?) ?? 1,
         crop: c.crop as String,
         area: (c.area as num).toDouble(),
-        location: (c.location as String?)?.isNotEmpty == true ? c.location as String : '${c.areaUnit} • ${c.cropStage}',
+        latitude: (c.latitude as double?) ?? 20.7453,
+        longitude: (c.longitude as double?) ?? 78.6022,
+        location: (c.location as String?)?.isNotEmpty == true ? c.location as String : 'Lat: ${c.latitude ?? 20.7453}, Long: ${c.longitude ?? 78.6022}',
         sowingDate: DateTime.tryParse(c.sowingDate as String) ?? DateTime.now(),
         healthScore: (c.healthScore as num).toDouble(),
         soilMoisture: zonesList.isNotEmpty ? zonesList.first.soilMoisture : 45.0,
