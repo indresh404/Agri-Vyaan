@@ -7,6 +7,7 @@ class FarmerProfile {
   final double farmArea;
   final String areaUnit; // acres or hectares
   final String mainCrop;
+  final String? fid;
 
   FarmerProfile({
     required this.name,
@@ -17,7 +18,35 @@ class FarmerProfile {
     required this.farmArea,
     required this.areaUnit,
     required this.mainCrop,
+    this.fid,
   });
+
+  factory FarmerProfile.fromMap(Map<String, dynamic> json) {
+    return FarmerProfile(
+      name: (json['name'] ?? json['Name'] ?? 'Farmer').toString(),
+      phone: (json['phone_no'] ?? json['phone'] ?? json['Phone no'] ?? json['Phone'] ?? '').toString(),
+      email: (json['email'] ?? 'farmer@agrivyaan.com').toString(),
+      preferredLanguage: (json['preferred_language'] ?? json['preferredLanguage'] ?? 'en').toString(),
+      location: (json['location'] ?? json['Location'] ?? 'Wardha, Maharashtra').toString(),
+      farmArea: (json['farm_area'] ?? json['farmArea'] as num?)?.toDouble() ?? 5.0,
+      areaUnit: (json['area_unit'] ?? json['areaUnit'] ?? 'acres').toString(),
+      mainCrop: (json['main_crop'] ?? json['mainCrop'] ?? 'Cotton').toString(),
+      fid: (json['fid'] ?? json['FID'] ?? json['auth_id'] ?? json['id'])?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap(String? authId) {
+    // Only columns that exist in the public.users table: phone_no, name, location, auth_id
+    final map = <String, dynamic>{
+      'phone_no': phone,
+      'name': name,
+      'location': location.isNotEmpty ? location : null,
+    };
+    if (authId != null && authId.isNotEmpty) {
+      map['auth_id'] = authId;
+    }
+    return map;
+  }
 
   FarmerProfile copyWith({
     String? name,
@@ -28,6 +57,7 @@ class FarmerProfile {
     double? farmArea,
     String? areaUnit,
     String? mainCrop,
+    String? fid,
   }) {
     return FarmerProfile(
       name: name ?? this.name,
@@ -38,9 +68,11 @@ class FarmerProfile {
       farmArea: farmArea ?? this.farmArea,
       areaUnit: areaUnit ?? this.areaUnit,
       mainCrop: mainCrop ?? this.mainCrop,
+      fid: fid ?? this.fid,
     );
   }
 }
+
 
 class Zone {
   final String id;
@@ -180,6 +212,7 @@ class DroneScan {
   });
 
   DroneScan copyWith({
+    String? id,
     DroneScanStatus? status,
     String? verificationStatus,
     int? healthScore,
@@ -187,7 +220,7 @@ class DroneScan {
     String? operatorName,
   }) {
     return DroneScan(
-      id: this.id,
+      id: id ?? this.id,
       fieldId: this.fieldId,
       scanType: this.scanType,
       date: this.date,
@@ -216,6 +249,7 @@ class CropField {
   final List<Zone> zones;
   final List<SensorReading> sensors;
   final List<String> activeAlerts;
+  final String? location; // e.g. 'Lat: 20.7453, Long: 78.6022'
 
   CropField({
     required this.id,
@@ -232,6 +266,7 @@ class CropField {
     required this.zones,
     required this.sensors,
     required this.activeAlerts,
+    this.location,
   });
 
   factory CropField.fromFarmField(dynamic f) {
@@ -319,6 +354,7 @@ class CropField {
   }
 
   CropField copyWith({
+    String? id,
     String? name,
     String? crop,
     double? area,
@@ -332,9 +368,10 @@ class CropField {
     List<Zone>? zones,
     List<SensorReading>? sensors,
     List<String>? activeAlerts,
+    String? location,
   }) {
     return CropField(
-      id: this.id,
+      id: id ?? this.id,
       name: name ?? this.name,
       crop: crop ?? this.crop,
       area: area ?? this.area,
@@ -348,6 +385,7 @@ class CropField {
       zones: zones ?? this.zones,
       sensors: sensors ?? this.sensors,
       activeAlerts: activeAlerts ?? this.activeAlerts,
+      location: location ?? this.location,
     );
   }
 }
