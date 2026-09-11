@@ -74,10 +74,11 @@ class FieldStorageService {
       };
       if (phone != null && phone.isNotEmpty) {
         insertData['phone_no'] = phone;
+      } else if (authUser?.phone != null && authUser!.phone!.isNotEmpty) {
+        insertData['phone_no'] = authUser.phone;
       }
       if (authUser != null) {
         insertData['auth_id'] = authUser.id;
-        insertData['phone'] = authUser.phone;
       }
       await _supabase.from('users').insert(insertData);
       debugPrint('Created new user profile in Supabase with fid: $newFid');
@@ -150,7 +151,7 @@ class FieldStorageService {
         final inserted = farmFieldFromMap(res);
         debugPrint('Field "${inserted.name}" (ID: ${inserted.id}, #${inserted.fieldNumber}) saved to Supabase fields table.');
         fields.add(inserted);
-        await _cacheLocalFields(fields);
+        await _cacheLocalFields(fields, fid: validFid);
         return inserted;
       }
     } catch (e) {
@@ -159,7 +160,7 @@ class FieldStorageService {
     }
 
     fields.add(updatedField);
-    await _cacheLocalFields(fields);
+    await _cacheLocalFields(fields, fid: validFid);
     return updatedField;
   }
 
@@ -187,11 +188,11 @@ class FieldStorageService {
       rethrow;
     }
 
-    await _cacheLocalFields(fields);
+    await _cacheLocalFields(fields, fid: validFid);
   }
 
   /// Deletes a field by ID from Supabase and local cache.
-  Future<void> deleteField(List<FarmField> fields, String id) async {
+  Future<void> deleteField(List<FarmField> fields, String id, {String? fid}) async {
     fields.removeWhere((f) => f.id == id);
 
     try {
@@ -202,7 +203,7 @@ class FieldStorageService {
       rethrow;
     }
 
-    await _cacheLocalFields(fields);
+    await _cacheLocalFields(fields, fid: fid);
   }
 
   /// Saves full list to local SharedPreferences cache.

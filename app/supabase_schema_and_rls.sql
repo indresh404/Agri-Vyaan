@@ -68,18 +68,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON fields TO anon, authenticated;
 
 -- 3. BOOKINGS TABLE
 CREATE TABLE IF NOT EXISTS bookings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    fid UUID NOT NULL REFERENCES users(fid) ON DELETE CASCADE,
-    fieldid UUID REFERENCES fields(fieldid) ON DELETE CASCADE,
-    date VARCHAR(50) NOT NULL,
-    time VARCHAR(50),
-    scan_type VARCHAR(100) NOT NULL,
-    operator_name VARCHAR(255) DEFAULT 'Pending Assignment',
-    status VARCHAR(50) NOT NULL DEFAULT 'REQUESTED',
-    verification_status VARCHAR(50) DEFAULT 'PENDING',
-    health_score INT DEFAULT 80,
-    ai_report_data JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    booking_id UUID NOT NULL DEFAULT gen_random_uuid(),
+    fid UUID NOT NULL,
+    fieldid UUID NOT NULL,
+    field_name TEXT,
+    booking_datetime TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    CONSTRAINT bookings_pkey PRIMARY KEY (booking_id),
+    CONSTRAINT bookings_fid_fkey FOREIGN KEY (fid) REFERENCES users (fid) ON DELETE CASCADE,
+    CONSTRAINT bookings_fieldid_fkey FOREIGN KEY (fieldid) REFERENCES fields (fieldid) ON DELETE CASCADE
 );
 
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;

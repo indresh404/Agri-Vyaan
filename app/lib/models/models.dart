@@ -188,7 +188,10 @@ extension DroneScanStatusExtension on DroneScanStatus {
 
 class DroneScan {
   final String id;
+  final String? fid;
   final String fieldId;
+  final String? fieldName;
+  final DateTime? bookingDatetime;
   final String scanType; // Crop Health Scan, Moisture/Soil Scan, Full Field Analysis
   final String date;
   final String time;
@@ -200,7 +203,10 @@ class DroneScan {
 
   DroneScan({
     required this.id,
+    this.fid,
     required this.fieldId,
+    this.fieldName,
+    this.bookingDatetime,
     required this.scanType,
     required this.date,
     required this.time,
@@ -213,6 +219,13 @@ class DroneScan {
 
   DroneScan copyWith({
     String? id,
+    String? fid,
+    String? fieldId,
+    String? fieldName,
+    DateTime? bookingDatetime,
+    String? scanType,
+    String? date,
+    String? time,
     DroneScanStatus? status,
     String? verificationStatus,
     int? healthScore,
@@ -221,10 +234,13 @@ class DroneScan {
   }) {
     return DroneScan(
       id: id ?? this.id,
-      fieldId: this.fieldId,
-      scanType: this.scanType,
-      date: this.date,
-      time: this.time,
+      fid: fid ?? this.fid,
+      fieldId: fieldId ?? this.fieldId,
+      fieldName: fieldName ?? this.fieldName,
+      bookingDatetime: bookingDatetime ?? this.bookingDatetime,
+      scanType: scanType ?? this.scanType,
+      date: date ?? this.date,
+      time: time ?? this.time,
       operatorName: operatorName ?? this.operatorName,
       status: status ?? this.status,
       verificationStatus: verificationStatus ?? this.verificationStatus,
