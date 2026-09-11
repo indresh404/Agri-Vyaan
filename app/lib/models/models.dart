@@ -237,9 +237,13 @@ class DroneScan {
 class CropField {
   final String id;
   final String name;
+  final int fieldNumber;
+  final String? userName;
   final String crop;
   final double area;
   final String areaUnit;
+  final double latitude;
+  final double longitude;
   final String sowingDate;
   final String cropStage; // Germination, Vegetative, Flowering, Fruiting, Harvest
   final int healthScore;
@@ -254,9 +258,13 @@ class CropField {
   CropField({
     required this.id,
     required this.name,
+    this.fieldNumber = 1,
+    this.userName,
     required this.crop,
     required this.area,
     required this.areaUnit,
+    this.latitude = 20.7453,
+    this.longitude = 78.6022,
     required this.sowingDate,
     required this.cropStage,
     required this.healthScore,
@@ -317,12 +325,19 @@ class CropField {
         history: [f.humidity - 5, f.humidity - 2, f.humidity],
       );
 
+      final latVal = (f.latitude as num?)?.toDouble() ?? 20.7453;
+      final lngVal = (f.longitude as num?)?.toDouble() ?? 78.6022;
+
       return CropField(
         id: f.id as String,
         name: f.name as String,
+        fieldNumber: (f.fieldNumber as int?) ?? 1,
+        userName: f.userName as String?,
         crop: f.crop as String,
         area: (f.area as num).toDouble(),
         areaUnit: 'acres',
+        latitude: latVal,
+        longitude: lngVal,
         sowingDate: f.sowingDate.toString().split(' ').first,
         cropStage: 'Vegetative stage',
         healthScore: f.healthScore.toInt(),
@@ -332,14 +347,19 @@ class CropField {
         zones: zonesList,
         sensors: [moistureSensor, tempSensor, humiditySensor],
         activeAlerts: alertsList,
+        location: f.location as String?,
       );
     } catch (_) {
       return CropField(
         id: f.id as String,
         name: f.name as String,
+        fieldNumber: (f.fieldNumber as int?) ?? 1,
+        userName: f.userName as String?,
         crop: f.crop as String,
         area: (f.area as num).toDouble(),
         areaUnit: 'acres',
+        latitude: 20.7453,
+        longitude: 78.6022,
         sowingDate: '2026-08-26',
         cropStage: 'Vegetative stage',
         healthScore: f.healthScore.toInt(),
@@ -356,9 +376,13 @@ class CropField {
   CropField copyWith({
     String? id,
     String? name,
+    int? fieldNumber,
+    String? userName,
     String? crop,
     double? area,
     String? areaUnit,
+    double? latitude,
+    double? longitude,
     String? sowingDate,
     String? cropStage,
     int? healthScore,
@@ -373,9 +397,13 @@ class CropField {
     return CropField(
       id: id ?? this.id,
       name: name ?? this.name,
+      fieldNumber: fieldNumber ?? this.fieldNumber,
+      userName: userName ?? this.userName,
       crop: crop ?? this.crop,
       area: area ?? this.area,
       areaUnit: areaUnit ?? this.areaUnit,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       sowingDate: sowingDate ?? this.sowingDate,
       cropStage: cropStage ?? this.cropStage,
       healthScore: healthScore ?? this.healthScore,

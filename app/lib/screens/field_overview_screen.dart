@@ -670,8 +670,16 @@ class _FieldOverviewScreenState extends State<FieldOverviewScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx); // close dialog
-              await widget.storageService
-                  .deleteField(widget.fields, _field.id);
+              AppState? appState;
+              try {
+                appState = AppStateProvider.of(context);
+              } catch (_) {}
+              if (appState != null) {
+                appState.deleteField(_field.id);
+              } else {
+                await widget.storageService
+                    .deleteField(widget.fields, _field.id);
+              }
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

@@ -45,28 +45,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON users TO anon, authenticated;
 
 -- 2. FIELDS TABLE
 CREATE TABLE IF NOT EXISTS fields (
-    fieldid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    fid UUID NOT NULL REFERENCES users(fid) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    crop VARCHAR(100) NOT NULL,
-    area NUMERIC(10,2) NOT NULL DEFAULT 1.0,
-    area_unit VARCHAR(20) DEFAULT 'acres',
-    location TEXT,
-    latitude NUMERIC(10,6),
-    longitude NUMERIC(10,6),
-    sowing_date TIMESTAMPTZ DEFAULT NOW(),
-    crop_stage VARCHAR(100) DEFAULT 'Sowing',
-    notes TEXT,
-    health_score NUMERIC(5,2) DEFAULT 80,
-    soil_moisture NUMERIC(5,2) DEFAULT 50,
-    temperature NUMERIC(5,2) DEFAULT 28,
-    humidity NUMERIC(5,2) DEFAULT 60,
-    last_scan TIMESTAMPTZ DEFAULT NOW(),
-    zones_json JSONB DEFAULT '[]'::jsonb,
-    problems_json JSONB DEFAULT '[]'::jsonb,
-    improvements_json JSONB DEFAULT '[]'::jsonb,
-    sensors_json JSONB DEFAULT '[]'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    fieldid UUID NOT NULL DEFAULT gen_random_uuid(),
+    fid UUID NOT NULL,
+    user_name TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    field_number INTEGER NOT NULL,
+    crop_name TEXT NOT NULL,
+    area NUMERIC NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    CONSTRAINT fields_pkey PRIMARY KEY (fieldid),
+    CONSTRAINT fields_fid_fkey FOREIGN KEY (fid) REFERENCES users (fid) ON DELETE CASCADE
 );
 
 ALTER TABLE fields ENABLE ROW LEVEL SECURITY;

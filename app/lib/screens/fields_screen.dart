@@ -24,172 +24,19 @@ class FieldsScreen extends StatefulWidget {
   @override
   State<FieldsScreen> createState() => _FieldsScreenState();
 
-  static void showAddFieldDialog(BuildContext context, AppState appState) {
-    final nameController = TextEditingController();
-    final areaController = TextEditingController();
-    String selectedUnit = 'acres';
-    String selectedCrop = 'Cotton';
-    String selectedStage = 'Germination stage';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Register New Field'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                          labelText: 'Field Name (e.g. Field D)'),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: areaController,
-                            decoration:
-                                const InputDecoration(labelText: 'Area Size'),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 1,
-                          child: DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            initialValue: selectedUnit,
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'acres', child: Text('acres')),
-                              DropdownMenuItem(
-                                  value: 'hectares', child: Text('hectares')),
-                            ],
-                            onChanged: (val) {
-                              setDialogState(() {
-                                selectedUnit = val!;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: selectedCrop,
-                      items: ['Cotton', 'Tomato', 'Wheat', 'Rice', 'Soybean', 'Maize', 'Potato']
-                          .map((c) =>
-                              DropdownMenuItem(value: c, child: Text(c)))
-                          .toList(),
-                      onChanged: (val) {
-                        setDialogState(() {
-                          selectedCrop = val!;
-                        });
-                      },
-                      decoration:
-                          const InputDecoration(labelText: 'Select Crop'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: selectedStage,
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'Germination stage',
-                            child: Text('Germination stage')),
-                        DropdownMenuItem(
-                            value: 'Vegetative stage',
-                            child: Text('Vegetative stage')),
-                        DropdownMenuItem(
-                            value: 'Flowering stage',
-                            child: Text('Flowering stage')),
-                        DropdownMenuItem(
-                            value: 'Fruiting stage',
-                            child: Text('Fruiting stage')),
-                        DropdownMenuItem(
-                            value: 'Harvest stage',
-                            child: Text('Harvest stage')),
-                      ],
-                      onChanged: (val) {
-                        setDialogState(() {
-                          selectedStage = val!;
-                        });
-                      },
-                      decoration: const InputDecoration(
-                          labelText: 'Crop Lifecycle Stage'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty &&
-                        areaController.text.isNotEmpty) {
-                      final newField = CropField(
-                        id: 'field_${DateTime.now().millisecondsSinceEpoch}',
-                        name: nameController.text,
-                        crop: selectedCrop,
-                        area: double.tryParse(areaController.text) ?? 1.0,
-                        areaUnit: selectedUnit,
-                        sowingDate: '2026-08-26',
-                        cropStage: selectedStage,
-                        healthScore: 90,
-                        prevHealthScore: 90,
-                        lastScanDate: 'None',
-                        moistureStatus: 'NORMAL',
-                        activeAlerts: [],
-                        zones: [
-                          Zone(
-                            id: 'z1',
-                            name: 'Zone 1',
-                            status: 'Healthy',
-                            moisture: 50,
-                            temperature: 28,
-                            risk: 'None',
-                            aiExplanation:
-                                'Field conditions are within normal limits.',
-                            recommendation: 'Monitor regularly.',
-                          ),
-                          Zone(
-                            id: 'z2',
-                            name: 'Zone 2',
-                            status: 'Healthy',
-                            moisture: 50,
-                            temperature: 28,
-                            risk: 'None',
-                            aiExplanation:
-                                'Field conditions are within normal limits.',
-                            recommendation: 'Monitor regularly.',
-                          ),
-                        ],
-                        sensors: [],
-                      );
-                      appState.addField(newField);
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen),
-                  child: const Text('Confirm',
-                      style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  static void showAddFieldDialog(BuildContext context, AppState appState) async {
+    final storageService = FieldStorageService();
+    final currentFarmFields = appState.fields.map((f) => FarmField.fromCropField(f)).toList();
+    await Navigator.push<FarmField>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddFieldScreen(
+          fields: currentFarmFields,
+          storageService: storageService,
+          defaultFid: appState.currentFid,
+          defaultUserName: appState.currentProfile?.name ?? 'Farmer',
+        ),
+      ),
     );
   }
 
@@ -375,14 +222,25 @@ class _FieldsScreenState extends State<FieldsScreen> {
       return;
     }
 
-    // Check SharedPreferences local fields
+    AppState? appState;
+    try {
+      appState = AppStateProvider.of(context);
+    } catch (_) {}
+
+    final currentFid = appState?.currentFid;
+    if (currentFid != null && currentFid.isNotEmpty) {
+      List<FarmField> loaded =
+          await (widget.storageService ?? _storageService).loadFields(fid: currentFid);
+      setState(() {
+        _fields = loaded;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Unauthenticated/demo fallback
     List<FarmField> loaded =
         await (widget.storageService ?? _storageService).loadFields();
-
-    if (loaded.isEmpty) {
-      loaded = DemoData.demoFields;
-      await (widget.storageService ?? _storageService).saveFields(loaded);
-    }
 
     setState(() {
       _fields = loaded;
@@ -391,24 +249,13 @@ class _FieldsScreenState extends State<FieldsScreen> {
   }
 
   List<FarmField> _getCombinedFields(AppState? appState) {
-    if (appState == null || appState.fields.isEmpty) {
-      return _fields;
+    if (appState != null && appState.isLoggedIn) {
+      return appState.fields.map((f) => FarmField.fromCropField(f)).toList();
     }
-
-    // Combine AppState fields (converted) with local storage fields avoiding duplicates by ID
-    final combinedMap = <String, FarmField>{};
-
-    for (final farmField in _fields) {
-      combinedMap[farmField.id] = farmField;
+    if (appState != null && appState.fields.isNotEmpty) {
+      return appState.fields.map((f) => FarmField.fromCropField(f)).toList();
     }
-
-    for (final cropField in appState.fields) {
-      if (!combinedMap.containsKey(cropField.id)) {
-        combinedMap[cropField.id] = FarmField.fromCropField(cropField);
-      }
-    }
-
-    return combinedMap.values.toList();
+    return _fields;
   }
 
   List<FarmField> _filterFields(List<FarmField> allFields) {
@@ -571,21 +418,30 @@ class _FieldsScreenState extends State<FieldsScreen> {
   }
 
   void _addField(AppState? appState) async {
-    if (appState != null) {
-      FieldsScreen.showAddFieldDialog(context, appState);
-      return;
-    }
+    final storage = widget.storageService ?? _storageService;
+    final currentFarmFields = appState != null
+        ? appState.fields.map((f) => FarmField.fromCropField(f)).toList()
+        : _fields;
 
     final result = await Navigator.push<FarmField>(
       context,
       MaterialPageRoute(
         builder: (_) => AddFieldScreen(
-          fields: _fields,
-          storageService: widget.storageService ?? _storageService,
+          fields: currentFarmFields,
+          storageService: storage,
+          defaultFid: appState?.currentFid,
+          defaultUserName: appState?.currentProfile?.name ?? 'Farmer',
         ),
       ),
     );
     if (result != null) {
+      if (appState != null) {
+        final newCrop = CropField.fromFarmField(result);
+        if (!appState.fields.any((f) => f.id == newCrop.id)) {
+          appState.fields.add(newCrop);
+          appState.notifyListeners();
+        }
+      }
       await _loadFields();
     }
   }

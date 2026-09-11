@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/farm_field.dart';
 import '../models/models.dart';
 import '../models/soil_health_card.dart';
@@ -93,9 +94,50 @@ class AppState extends ChangeNotifier {
       if (session != null && user != null) {
         debugPrint('Active Supabase session detected for user: ${user.id} (${user.phone})');
         await loadUserDataFromSupabase(user.id, phone: user.phone);
-      } else {
-        debugPrint('No active Supabase session found.');
+        return;
       }
+
+      // Restore session from local SharedPreferences if user logged in by phone
+      final prefs = await SharedPreferences.getInstance();
+      final savedFid = prefs.getString('saved_farmer_fid');
+      final savedPhone = prefs.getString('saved_farmer_phone');
+
+      if (savedFid != null && savedFid.isNotEmpty && FieldStorageService.isUuid(savedFid)) {
+        final profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('fid', savedFid)
+            .maybeSingle();
+
+        if (profileRes != null) {
+          _currentProfile = FarmerProfile.fromMap(profileRes);
+          _isLoggedIn = true;
+          _needsProfileSetup = false;
+          debugPrint('Restored farmer session for FID: $savedFid (${_currentProfile?.name})');
+          await loadUserDataFromSupabase(savedFid, phone: _currentProfile?.phone);
+          return;
+        }
+      } else if (savedPhone != null && savedPhone.isNotEmpty) {
+        final profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('phone_no', savedPhone)
+            .maybeSingle();
+
+        if (profileRes != null) {
+          _currentProfile = FarmerProfile.fromMap(profileRes);
+          _isLoggedIn = true;
+          _needsProfileSetup = false;
+          final fid = _currentProfile?.fid ?? profileRes['fid']?.toString();
+          if (fid != null) {
+            await prefs.setString('saved_farmer_fid', fid);
+            await loadUserDataFromSupabase(fid, phone: savedPhone);
+            return;
+          }
+        }
+      }
+
+      debugPrint('No active farmer session found on startup.');
     } catch (e) {
       debugPrint('Error checking existing Supabase session: $e');
     }
@@ -111,12 +153,7 @@ class AppState extends ChangeNotifier {
           final user = session.user;
           await loadUserDataFromSupabase(user.id, phone: user.phone);
         } else if (event == AuthChangeEvent.signedOut) {
-          _isLoggedIn = false;
-          _currentProfile = null;
-          _fields.clear();
-          _scans.clear();
-          _soilHealthCards.clear();
-          notifyListeners();
+          await logout();
         }
       });
     } catch (e) {
@@ -124,26 +161,36 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Load profile, fields, soil health cards, and bookings from Supabase for current authenticated farmer
-  Future<void> loadUserDataFromSupabase(String authId, {String? phone}) async {
+  /// Load profile, fields, soil health cards, and bookings strictly for current authenticated farmer
+  Future<void> loadUserDataFromSupabase(String authOrFid, {String? phone}) async {
     _isLoadingAuth = true;
     notifyListeners();
 
     try {
       // 1. Fetch User Profile
-      final profileRes = await _supabase
-          .from('users')
-          .select()
-          .eq('auth_id', authId)
-          .maybeSingle();
+      Map<String, dynamic>? profileRes;
+      if (FieldStorageService.isUuid(authOrFid)) {
+        profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('fid', authOrFid)
+            .maybeSingle();
+      }
+
+      if (profileRes == null) {
+        profileRes = await _supabase
+            .from('users')
+            .select()
+            .eq('auth_id', authOrFid)
+            .maybeSingle();
+      }
 
       if (profileRes != null) {
-        _currentProfile = FarmerProfile.fromMap(profileRes as Map<String, dynamic>);
+        _currentProfile = FarmerProfile.fromMap(profileRes);
         _isLoggedIn = true;
         _needsProfileSetup = false;
-        debugPrint('Loaded farmer profile from Supabase for: ${_currentProfile?.name}');
+        debugPrint('Loaded farmer profile from Supabase for: ${_currentProfile?.name} (FID: ${_currentProfile?.fid})');
       } else {
-        // User authenticated via Phone OTP but profile not created yet in users table
         debugPrint('Authenticated user has no profile record in users table yet.');
         _currentProfile = FarmerProfile(
           name: 'Farmer',
@@ -154,73 +201,39 @@ class AppState extends ChangeNotifier {
           farmArea: 5.0,
           areaUnit: 'acres',
           mainCrop: 'Cotton',
-          fid: null,
+          fid: FieldStorageService.isUuid(authOrFid) ? authOrFid : null,
         );
         _isLoggedIn = false;
         _needsProfileSetup = true;
       }
 
-      final fidToUse = _currentProfile?.fid ?? authId;
+      final fidToUse = _currentProfile?.fid ?? (FieldStorageService.isUuid(authOrFid) ? authOrFid : null);
 
-      // 2. Fetch Fields from Supabase
-      final farmFields = await _fieldStorageService.loadFields(fid: fidToUse);
-      if (farmFields.isNotEmpty) {
-        _fields = farmFields.map((ff) => CropField(
-          id: ff.id,
-          name: ff.name,
-          crop: ff.crop,
-          area: ff.area,
-          areaUnit: 'acres',
-          sowingDate: ff.sowingDate.toString().split(' ').first,
-          cropStage: 'Vegetative stage',
-          healthScore: ff.healthScore.toInt(),
-          prevHealthScore: ff.healthScore.toInt(),
-          lastScanDate: ff.lastScan.toString().split(' ').first,
-          moistureStatus: ff.soilMoisture < 35 ? 'LOW' : 'NORMAL',
-          zones: ff.zones.map((z) => Zone(
-            id: 'z_${z.name.replaceAll(' ', '_')}',
-            name: z.name,
-            status: z.problem ?? 'Healthy',
-            moisture: z.soilMoisture,
-            temperature: z.temperature,
-            risk: z.severity ?? 'None',
-            aiExplanation: z.problem != null ? 'Issue detected: ${z.problem}' : 'Field conditions optimal.',
-            recommendation: z.recommendation ?? 'Monitor regularly.',
-          )).toList(),
-          sensors: [
-            SensorReading(
-              sensorName: 'Soil Moisture',
-              currentValue: ff.soilMoisture,
-              minNormal: 35.0,
-              maxNormal: 65.0,
-              unit: '%',
-              status: ff.soilMoisture < 35 ? 'LOW' : 'NORMAL',
-              history: [ff.soilMoisture, ff.soilMoisture],
-            ),
-            SensorReading(
-              sensorName: 'Temperature',
-              currentValue: ff.temperature,
-              minNormal: 20.0,
-              maxNormal: 35.0,
-              unit: '°C',
-              status: 'NORMAL',
-              history: [ff.temperature, ff.temperature],
-            ),
-          ],
-          activeAlerts: ff.problems.map((p) => p.title).toList(),
-        )).toList();
-      }
+      if (fidToUse != null && fidToUse.isNotEmpty) {
+        // Save session locally
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('saved_farmer_fid', fidToUse);
+          if (_currentProfile?.phone != null && _currentProfile!.phone.isNotEmpty) {
+            await prefs.setString('saved_farmer_phone', _currentProfile!.phone);
+          }
+        } catch (_) {}
 
-      // 3. Fetch Soil Health Cards from Supabase
-      final loadedShc = await _shcStorageService.loadCards(fid: fidToUse);
-      if (loadedShc.isNotEmpty) {
+        // 2. Fetch Fields strictly belonging to this farmer
+        final farmFields = await _fieldStorageService.loadFields(fid: fidToUse);
+        _fields = farmFields.map((ff) => CropField.fromFarmField(ff)).toList();
+
+        // 3. Fetch Soil Health Cards strictly for this farmer
+        final loadedShc = await _shcStorageService.loadCards(fid: fidToUse);
         _soilHealthCards = loadedShc;
-      }
 
-      // 4. Fetch Bookings from Supabase
-      final loadedBookings = await _bookingService.loadBookings(fidToUse);
-      if (loadedBookings.isNotEmpty) {
+        // 4. Fetch Bookings strictly for this farmer
+        final loadedBookings = await _bookingService.loadBookings(fidToUse);
         _scans = loadedBookings;
+      } else {
+        _fields = [];
+        _scans = [];
+        _soilHealthCards = {};
       }
     } catch (e) {
       debugPrint('Error loading farmer data from Supabase: $e');
@@ -353,6 +366,20 @@ class AppState extends ChangeNotifier {
       _isLoggedIn = true;
       _needsProfileSetup = false;
       debugPrint('Successfully saved farmer profile to Supabase users table! FID: $newFid');
+
+      // Persist session to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('saved_farmer_fid', newFid);
+        if (profile.phone.isNotEmpty) {
+          await prefs.setString('saved_farmer_phone', profile.phone);
+        }
+      } catch (e) {
+        debugPrint('Error saving session locally: $e');
+      }
+
+      // Load data strictly for this newly registered/updated farmer
+      await loadUserDataFromSupabase(newFid, phone: profile.phone);
     } else {
       // Local fallback
       _currentProfile = profile.copyWith(fid: profile.fid ?? const Uuid().v4());
@@ -523,8 +550,18 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error signing out from Supabase: $e');
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('saved_farmer_fid');
+      await prefs.remove('saved_farmer_phone');
+    } catch (e) {
+      debugPrint('Error clearing local session: $e');
+    }
     _isLoggedIn = false;
     _currentProfile = null;
+    _fields = [];
+    _scans = [];
+    _soilHealthCards = {};
     _initializeData();
     notifyListeners();
   }
@@ -536,17 +573,28 @@ class AppState extends ChangeNotifier {
 
   // --- Field Management ---
   Future<void> addField(CropField field) async {
-    final farmField = FarmField.fromCropField(field).copyWith(id: const Uuid().v4());
     final fidToUse = currentFid;
-    if (fidToUse == null) {
-      throw StateError('A saved farmer profile is required before adding a field.');
-    }
-    await _fieldStorageService.addField([], farmField, fid: fidToUse);
-    _fields.add(field.copyWith(id: farmField.id));
+    final userName = _currentProfile?.name ?? (field.userName != null && field.userName!.isNotEmpty ? field.userName! : 'Farmer');
+    
+    final farmField = FarmField.fromCropField(field).copyWith(
+      id: FieldStorageService.isUuid(field.id) ? field.id : const Uuid().v4(),
+      userName: userName,
+      fieldNumber: field.fieldNumber > 0 ? field.fieldNumber : (_fields.length + 1),
+    );
+
+    final saved = await _fieldStorageService.addField(
+      [],
+      farmField,
+      fid: fidToUse,
+      userName: userName,
+    );
+
+    final newCropField = CropField.fromFarmField(saved);
+    _fields.add(newCropField);
 
     _addNotification(
       title: 'New Field Registered',
-      description: 'Field "${field.name}" was successfully registered under monitoring.',
+      description: 'Field "${newCropField.name}" (#${newCropField.fieldNumber}) was successfully registered and saved.',
       isCritical: false,
     );
     notifyListeners();
@@ -558,8 +606,9 @@ class AppState extends ChangeNotifier {
       _fields[idx] = updatedField;
 
       final farmField = FarmField.fromCropField(updatedField);
-      final fidToUse = currentFid ?? 'demo_farmer_id';
-      await _fieldStorageService.updateField([], farmField, fid: fidToUse);
+      final fidToUse = currentFid;
+      final userName = _currentProfile?.name ?? updatedField.userName ?? 'Farmer';
+      await _fieldStorageService.updateField([], farmField, fid: fidToUse, userName: userName);
 
       notifyListeners();
     }

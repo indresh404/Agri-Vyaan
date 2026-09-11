@@ -2,80 +2,189 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../models/farm_field.dart';
 
 /// Service for persisting field data with Supabase PostgreSQL database
-/// and local storage fallback.
+/// according to schema:
+/// - fieldid (uuid, primary key)
+/// - fid (uuid, foreign key to users.fid)
+/// - user_name (text)
+/// - field_name (text)
+/// - field_number (integer)
+/// - crop_name (text)
+/// - area (numeric)
+/// - latitude (double precision)
+/// - longitude (double precision)
 class FieldStorageService {
   static const String _storageKey = 'agrivyaan_fields';
+  static const _uuidPattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
 
   SupabaseClient get _supabase => Supabase.instance.client;
 
-  /// Loads fields belonging to farmer [fid] from Supabase, falling back to local cache.
-  Future<List<FarmField>> loadFields({String? fid}) async {
-    final currentFid = fid ?? _supabase.auth.currentUser?.id;
+  static bool isUuid(String? id) {
+    if (id == null || id.isEmpty) return false;
+    return RegExp(_uuidPattern, caseSensitive: false).hasMatch(id);
+  }
 
-    if (currentFid != null && currentFid.isNotEmpty) {
+  String _getStorageKey(String? fid) =>
+      (fid != null && fid.isNotEmpty) ? 'agrivyaan_fields_$fid' : 'agrivyaan_fields_guest';
+
+  /// Ensures a valid user UUID exists in the users table to satisfy foreign key constraint.
+  Future<String> _ensureValidUserFid(String? requestedFid, {String? userName, String? phone}) async {
+    final authUser = _supabase.auth.currentUser;
+    final candidateFid = requestedFid ?? authUser?.id;
+
+    // 1. If candidateFid is a valid UUID, verify if it exists in users table
+    if (isUuid(candidateFid)) {
       try {
-        final response = await _supabase
-            .from('fields')
-            .select()
-            .eq('fid', currentFid);
+        final existing = await _supabase
+            .from('users')
+            .select('fid')
+            .eq('fid', candidateFid!)
+            .maybeSingle();
 
-        final List<dynamic> data = response as List<dynamic>;
-        final fields = data
-            .map((item) => farmFieldFromMap(item as Map<String, dynamic>))
-            .toList();
+        if (existing != null && existing['fid'] != null) {
+          return candidateFid;
+        }
 
-        // Cache locally for offline availability
-        await _cacheLocalFields(fields);
-        return fields;
+        // Check if user exists by auth_id
+        if (authUser != null) {
+          final byAuth = await _supabase
+              .from('users')
+              .select('fid')
+              .eq('auth_id', authUser.id)
+              .maybeSingle();
+          if (byAuth != null && byAuth['fid'] != null) {
+            return byAuth['fid'].toString();
+          }
+        }
       } catch (e) {
-        debugPrint('Error fetching fields from Supabase: $e');
+        debugPrint('Error checking user fid in Supabase: $e');
       }
     }
 
-    // Fallback to local storage
-    return await _loadLocalFields();
+    // 2. Create a unique user profile for this specific user
+    try {
+      final newFid = isUuid(candidateFid) ? candidateFid! : const Uuid().v4();
+      final insertData = <String, dynamic>{
+        'fid': newFid,
+        'name': (userName != null && userName.isNotEmpty) ? userName : 'Farmer',
+        'location': 'Wardha, Maharashtra',
+      };
+      if (phone != null && phone.isNotEmpty) {
+        insertData['phone_no'] = phone;
+      }
+      if (authUser != null) {
+        insertData['auth_id'] = authUser.id;
+        insertData['phone'] = authUser.phone;
+      }
+      await _supabase.from('users').insert(insertData);
+      debugPrint('Created new user profile in Supabase with fid: $newFid');
+      return newFid;
+    } catch (e) {
+      debugPrint('Error creating user in Supabase: $e');
+      return isUuid(candidateFid) ? candidateFid! : const Uuid().v4();
+    }
+  }
+
+  /// Loads fields belonging strictly to farmer [fid] from Supabase, falling back to local cache.
+  Future<List<FarmField>> loadFields({String? fid}) async {
+    final currentFid = fid ?? _supabase.auth.currentUser?.id;
+
+    // Strict user isolation: If no fid is provided, do NOT load all fields from other users!
+    if (currentFid == null || currentFid.isEmpty || !isUuid(currentFid)) {
+      return await _loadLocalFields(fid: currentFid);
+    }
+
+    try {
+      final response = await _supabase
+          .from('fields')
+          .select()
+          .eq('fid', currentFid)
+          .order('field_number', ascending: true);
+
+      if (response is List) {
+        final fields = response
+            .map((item) => farmFieldFromMap(item as Map<String, dynamic>))
+            .toList();
+
+        // Cache locally for this specific user
+        await _cacheLocalFields(fields, fid: currentFid);
+        return fields;
+      }
+    } catch (e) {
+      debugPrint('Error fetching fields from Supabase: $e');
+    }
+
+    // Fallback to local storage for this specific user
+    return await _loadLocalFields(fid: currentFid);
   }
 
   /// Saves / inserts a single field into Supabase and local cache.
-  Future<void> addField(List<FarmField> fields, FarmField field, {String? fid}) async {
-    final currentFid = fid ?? _supabase.auth.currentUser?.id;
-    if (currentFid == null || currentFid.isEmpty) {
-      throw StateError('A saved farmer profile is required before adding a field.');
+  Future<FarmField> addField(
+    List<FarmField> fields,
+    FarmField field, {
+    String? fid,
+    String? userName,
+  }) async {
+    final validFid = await _ensureValidUserFid(fid, userName: userName ?? field.userName);
+    
+    // Ensure field has a valid UUID for fieldid
+    String fieldIdToUse = field.id;
+    if (!isUuid(fieldIdToUse)) {
+      fieldIdToUse = const Uuid().v4();
     }
-    final mapData = farmFieldToMap(field, currentFid);
+    
+    final updatedField = field.copyWith(id: fieldIdToUse, fid: validFid);
+    final mapData = farmFieldToMap(updatedField, validFid, userName: userName);
 
     try {
-      await _supabase.from('fields').insert(mapData);
-      debugPrint('Field "${field.name}" saved to Supabase fields table.');
+      final res = await _supabase
+          .from('fields')
+          .insert(mapData)
+          .select()
+          .maybeSingle();
+
+      if (res != null) {
+        final inserted = farmFieldFromMap(res);
+        debugPrint('Field "${inserted.name}" (ID: ${inserted.id}, #${inserted.fieldNumber}) saved to Supabase fields table.');
+        fields.add(inserted);
+        await _cacheLocalFields(fields);
+        return inserted;
+      }
     } catch (e) {
       debugPrint('Error inserting field to Supabase: $e');
+      rethrow;
     }
 
-    // Update local list & cache
-    fields.add(field);
+    fields.add(updatedField);
     await _cacheLocalFields(fields);
+    return updatedField;
   }
 
   /// Updates a field in Supabase and local cache.
-  Future<void> updateField(List<FarmField> fields, FarmField updated, {String? fid}) async {
-    final currentFid = fid ?? _supabase.auth.currentUser?.id;
-    if (currentFid == null || currentFid.isEmpty) {
-      throw StateError('A saved farmer profile is required before updating a field.');
-    }
+  Future<void> updateField(
+    List<FarmField> fields,
+    FarmField updated, {
+    String? fid,
+    String? userName,
+  }) async {
+    final validFid = await _ensureValidUserFid(fid, userName: userName ?? updated.userName);
     final index = fields.indexWhere((f) => f.id == updated.id);
     if (index != -1) {
       fields[index] = updated;
     }
 
     try {
-      final mapData = farmFieldToMap(updated, currentFid);
+      final mapData = farmFieldToMap(updated, validFid, userName: userName);
+      mapData.remove('fieldid'); // Don't include primary key in update payload
+      
       await _supabase.from('fields').update(mapData).eq('fieldid', updated.id);
       debugPrint('Field "${updated.name}" updated in Supabase.');
     } catch (e) {
       debugPrint('Error updating field in Supabase: $e');
+      rethrow;
     }
 
     await _cacheLocalFields(fields);
@@ -90,6 +199,7 @@ class FieldStorageService {
       debugPrint('Field ID $id deleted from Supabase.');
     } catch (e) {
       debugPrint('Error deleting field from Supabase: $e');
+      rethrow;
     }
 
     await _cacheLocalFields(fields);
@@ -110,10 +220,14 @@ class FieldStorageService {
 
   static FarmField farmFieldFromMap(Map<String, dynamic> json) {
     final idStr = (json['fieldid'] ?? json['FIELDID'] ?? json['id'] ?? '').toString();
-    final cropStr = (json['crop'] ?? json['Crop'] ?? 'Cotton').toString();
-    final nameStr = '$cropStr Field';
+    final fidStr = (json['fid'] ?? '').toString();
+    final userNameStr = (json['user_name'] ?? json['userName'] ?? json['farmer_name'] ?? 'Farmer').toString();
+    final fieldNameStr = (json['field_name'] ?? json['name'] ?? json['FieldName'] ?? 'Field').toString();
+    final fieldNumVal = (json['field_number'] ?? json['fieldNumber'] ?? json['field_no'] as num?)?.toInt() ?? 1;
+    final cropStr = (json['crop_name'] ?? json['crop'] ?? json['Crop'] ?? 'Cotton').toString();
     final areaVal = (json['area'] ?? json['Area'] as num?)?.toDouble() ?? 1.0;
-    final locationStr = 'Lat: ${json['latitude'] ?? ''}, Long: ${json['longitude'] ?? ''}';
+    final latVal = (json['latitude'] ?? json['lat'] as num?)?.toDouble() ?? 20.7453;
+    final lngVal = (json['longitude'] ?? json['lng'] as num?)?.toDouble() ?? 78.6022;
 
     DateTime sowing;
     try {
@@ -133,6 +247,16 @@ class FieldStorageService {
     final rawZones = json['zones_json'] ?? json['zones'];
     if (rawZones is List) {
       zones = rawZones.map((z) => FieldZone.fromJson(z as Map<String, dynamic>)).toList();
+    } else {
+      zones = [
+        FieldZone(
+          name: 'Zone 1',
+          healthScore: (json['health_score'] as num?)?.toDouble() ?? 80.0,
+          soilMoisture: (json['soil_moisture'] as num?)?.toDouble() ?? 50.0,
+          temperature: (json['temperature'] as num?)?.toDouble() ?? 28.0,
+          humidity: (json['humidity'] as num?)?.toDouble() ?? 60.0,
+        ),
+      ];
     }
 
     List<FieldProblem> problems = [];
@@ -148,11 +272,16 @@ class FieldStorageService {
     }
 
     return FarmField(
-      id: idStr.isNotEmpty ? idStr : 'field_${DateTime.now().millisecondsSinceEpoch}',
-      name: nameStr,
+      id: idStr.isNotEmpty ? idStr : const Uuid().v4(),
+      fid: fidStr.isNotEmpty ? fidStr : null,
+      userName: userNameStr,
+      name: fieldNameStr,
+      fieldNumber: fieldNumVal,
       crop: cropStr,
       area: areaVal,
-      location: locationStr,
+      latitude: latVal,
+      longitude: lngVal,
+      location: (json['location'] ?? 'Lat: $latVal, Long: $lngVal').toString(),
       sowingDate: sowing,
       notes: json['notes'] as String?,
       healthScore: (json['health_score'] ?? json['healthScore'] as num?)?.toDouble() ?? 80.0,
@@ -167,40 +296,48 @@ class FieldStorageService {
     );
   }
 
-  static Map<String, dynamic> farmFieldToMap(FarmField field, String fid) {
+  /// Converts a FarmField to a Map matching public.fields columns:
+  /// - fieldid
+  /// - fid
+  /// - user_name
+  /// - field_name
+  /// - field_number
+  /// - crop_name
+  /// - area
+  /// - latitude
+  /// - longitude
+  static Map<String, dynamic> farmFieldToMap(FarmField field, String fid, {String? userName}) {
     final map = <String, dynamic>{
       'fid': fid,
-      'name': field.name.isNotEmpty ? field.name : '${field.crop} Field',
-      'crop': field.crop,
+      'user_name': (userName != null && userName.isNotEmpty)
+          ? userName
+          : (field.userName.isNotEmpty ? field.userName : 'Farmer'),
+      'field_name': field.name.isNotEmpty ? field.name : '${field.crop} Field',
+      'field_number': field.fieldNumber,
+      'crop_name': field.crop.isNotEmpty ? field.crop : 'Cotton',
       'area': field.area,
-      'latitude': _coordinate(field.location, 'lat') ?? 20.7453,
-      'longitude': _coordinate(field.location, 'long') ?? 78.6022,
+      'latitude': field.latitude,
+      'longitude': field.longitude,
     };
-    if (RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', caseSensitive: false)
-        .hasMatch(field.id)) {
+
+    if (isUuid(field.id)) {
       map['fieldid'] = field.id;
     }
     return map;
   }
 
-  static double? _coordinate(String text, String label) {
-    final match = RegExp('$label(?:itude)?\\s*[:=]\\s*(-?\\d+(?:\\.\\d+)?)', caseSensitive: false)
-        .firstMatch(text);
-    return match == null ? null : double.tryParse(match.group(1)!);
-  }
-
-  Future<void> _cacheLocalFields(List<FarmField> fields) async {
+  Future<void> _cacheLocalFields(List<FarmField> fields, {String? fid}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = fields.map((f) => f.toJson()).toList();
-      await prefs.setString(_storageKey, jsonEncode(jsonList));
+      await prefs.setString(_getStorageKey(fid), jsonEncode(jsonList));
     } catch (_) {}
   }
 
-  Future<List<FarmField>> _loadLocalFields() async {
+  Future<List<FarmField>> _loadLocalFields({String? fid}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_storageKey);
+      final jsonString = prefs.getString(_getStorageKey(fid));
       if (jsonString == null || jsonString.isEmpty) return [];
       final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
       return jsonList.map((item) => FarmField.fromJson(item as Map<String, dynamic>)).toList();
