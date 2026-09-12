@@ -1,12 +1,20 @@
 import type { FarmerRequest, FieldAsset, DroneOperation, CropFinding, AssessmentReport, ActivityItem, ZoneData, SensorReading, WeatherForecast, LibraryItem, ActionEntry } from '../types';
 
 // ─── Helper: generate 6x6 zone grid for a field ───────────────────────────────
+// GPS coords are spread across the Ambegaon potato field (19.0536–19.0550°N, 73.8810–73.8830°E)
 const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneData[] => {
   const zones: ZoneData[] = [];
   let count = 1;
+  // Field boundary spans roughly 0.0014° lat × 0.0020° lng → 6 cells each
+  const LAT_START = 19.0537;
+  const LNG_START = 73.8812;
+  const LAT_STEP  = 0.0002;   // ~22m per row
+  const LNG_STEP  = 0.0003;   // ~27m per col
   for (let r = 1; r <= 6; r++) {
     for (let c = 1; c <= 6; c++) {
       const override = overrides[count] || {};
+      const lat = (LAT_START + (r - 1) * LAT_STEP).toFixed(4);
+      const lng = (LNG_START + (c - 1) * LNG_STEP).toFixed(4);
       zones.push({
         id: `Zone ${count}`,
         zoneNumber: count,
@@ -15,7 +23,7 @@ const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneD
         status: 'Healthy',
         soilMoisture: 50 + ((count * 3) % 12),
         temperature: 29,
-        gpsCoords: `19.${2180 + count}, 72.${9770 + count}`,
+        gpsCoords: `${lat}, ${lng}`,
         lastScanned: 'Today, 10:42 AM',
         ...override
       });
@@ -24,6 +32,7 @@ const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneD
   }
   return zones;
 };
+
 
 // ─── FARMER REQUESTS ──────────────────────────────────────────────────────────
 export const MOCK_REQUESTS: FarmerRequest[] = [
@@ -34,11 +43,15 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     fieldName: 'Field A (Potato)',
     location: 'Thane, Maharashtra',
     requestedDate: '2026-08-26',
+    requestedTime: '08:30 AM',
+    scanType: 'Crop Health Scan',
     priority: 'High',
     status: 'In Progress',
     notes: 'Visible late blight symptoms on potato foliage in northern parcel. Zone 2 moisture dropped from 38% to 27% over 48 hours. Requesting multispectral analysis.',
     areaHa: 4.8,
     crop: 'Potato',
+    sowingDate: '2026-06-15',
+    cropStage: 'Flowering stage',
     previousOperationsCount: 3
   },
   {
@@ -48,11 +61,15 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     fieldName: 'Field B (Potato)',
     location: 'Kalyan, Maharashtra',
     requestedDate: '2026-08-24',
+    requestedTime: '10:00 AM',
+    scanType: 'Full Field Analysis',
     priority: 'Medium',
     status: 'Completed',
     notes: 'Brown/dark lesions appearing on potato leaves in Zone 2. Possible Early Blight (Alternaria solani). Requesting full field analysis.',
     areaHa: 6.2,
     crop: 'Potato',
+    sowingDate: '2026-07-01',
+    cropStage: 'Vegetative stage',
     previousOperationsCount: 5
   },
   {
@@ -62,11 +79,15 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     fieldName: 'Field C (Potato)',
     location: 'Bhiwandi, Maharashtra',
     requestedDate: '2026-08-25',
+    requestedTime: '07:45 AM',
+    scanType: 'Moisture/Soil Scan',
     priority: 'Low',
     status: 'Completed',
     notes: 'Moisture/soil scan for tuber-bulking stage potato field. Uniform canopy check requested.',
     areaHa: 3.5,
     crop: 'Potato',
+    sowingDate: '2026-08-10',
+    cropStage: 'Germination stage',
     previousOperationsCount: 2
   },
   {
@@ -76,11 +97,15 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     fieldName: 'Field D (Potato)',
     location: 'Panvel, Maharashtra',
     requestedDate: '2026-08-24',
+    requestedTime: '14:00 PM',
+    scanType: 'Crop Health Scan',
     priority: 'High',
     status: 'Pending',
     notes: 'Suspected Black Scurf (Rhizoctonia solani) damage along field perimeter zones. Needs emergency multispectral evaluation.',
     areaHa: 5.1,
     crop: 'Potato',
+    sowingDate: '2026-06-20',
+    cropStage: 'Tuber initiation',
     previousOperationsCount: 1
   },
   {
@@ -90,11 +115,15 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     fieldName: 'Field E (Potato)',
     location: 'Vasai, Maharashtra',
     requestedDate: '2026-08-24',
+    requestedTime: '09:00 AM',
+    scanType: 'Full Field Analysis',
     priority: 'Medium',
     status: 'Scheduled',
     notes: 'Baseline NDVI mapping for upcoming potato planting season planning.',
     areaHa: 7.0,
     crop: 'Potato',
+    sowingDate: '2026-07-15',
+    cropStage: 'Vegetative stage',
     previousOperationsCount: 4
   }
 ];
@@ -121,11 +150,17 @@ const fieldCSensors: SensorReading[] = [
 export const MOCK_FIELDS: FieldAsset[] = [
   {
     id: 'FIELD-A',
-    name: 'Field A (Potato)',
-    farmerName: 'Ramesh Kumar',
-    location: 'Thane, Maharashtra',
-    crop: 'Potato',
-    areaHa: 4.8,
+    name: 'Shree LR Tiwari College Field',
+    farmerName: 'Campus Operations',
+    location: 'Mira Road, Thane, Maharashtra',
+    crop: 'Experimental Parcel',
+    areaHa: 0.793,
+    boundaryPolygon: [
+      [19.28455, 72.87125],
+      [19.28475, 72.87190],
+      [19.28420, 72.87215],
+      [19.28400, 72.87150]
+    ],
     sowingDate: '2026-06-15',
     cropStage: 'Tuber bulking stage',
     status: 'Attention Required',
@@ -148,6 +183,12 @@ export const MOCK_FIELDS: FieldAsset[] = [
     location: 'Kalyan, Maharashtra',
     crop: 'Potato',
     areaHa: 6.2,
+    boundaryPolygon: [
+      [19.0570, 73.8850],
+      [19.0575, 73.8875],
+      [19.0590, 73.8870],
+      [19.0585, 73.8845]
+    ],
     sowingDate: '2026-07-01',
     cropStage: 'Vegetative / Haulm growth stage',
     status: 'Attention Required',
@@ -168,6 +209,12 @@ export const MOCK_FIELDS: FieldAsset[] = [
     location: 'Bhiwandi, Maharashtra',
     crop: 'Potato',
     areaHa: 3.5,
+    boundaryPolygon: [
+      [19.0510, 73.8780],
+      [19.0515, 73.8800],
+      [19.0525, 73.8795],
+      [19.0520, 73.8775]
+    ],
     sowingDate: '2026-08-10',
     cropStage: 'Emergence / Early vegetative stage',
     status: 'Normal',
@@ -186,6 +233,12 @@ export const MOCK_FIELDS: FieldAsset[] = [
     location: 'Panvel, Maharashtra',
     crop: 'Potato',
     areaHa: 5.1,
+    boundaryPolygon: [
+      [19.1120, 73.0125],
+      [19.1125, 73.0150],
+      [19.1140, 73.0145],
+      [19.1135, 73.0120]
+    ],
     status: 'Attention Required',
     healthScore: 68,
     lastScan: '3 days ago',
