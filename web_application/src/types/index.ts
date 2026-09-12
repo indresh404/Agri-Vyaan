@@ -28,11 +28,15 @@ export interface FarmerRequest {
   fieldName: string;
   location: string;
   requestedDate: string;
+  requestedTime?: string; // e.g. 10:00 AM
+  scanType: 'Crop Health Scan' | 'Moisture/Soil Scan' | 'Full Field Analysis';
   priority: PriorityLevel;
   status: RequestStatus;
   notes: string;
   areaHa: number;
   crop: string;
+  sowingDate?: string;
+  cropStage?: string;
   previousOperationsCount: number;
 }
 
@@ -82,6 +86,8 @@ export interface FieldAsset {
   location: string;
   crop: string;
   areaHa: number;
+  perimeterMeters?: number;
+  boundaryPolygon?: [number, number][]; // Array of [lat, lng] tuples
   sowingDate?: string;
   cropStage?: string;
   status: 'Normal' | 'Attention Required' | 'Scanning' | 'Pending Baseline';

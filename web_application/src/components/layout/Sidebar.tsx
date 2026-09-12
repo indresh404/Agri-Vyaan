@@ -1,18 +1,10 @@
 import React from 'react';
 import type { NavTab } from '../../types';
 import { 
-  LayoutDashboard, 
-  FileText, 
   Map, 
   Radio, 
-  CheckCircle2, 
-  FileCheck, 
-  BarChart3, 
-  Activity, 
-  Settings, 
-  ShieldCheck,
-  Cloud,
-  BookOpen
+  FileText, 
+  ShieldCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,27 +17,12 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onNavigate,
-  pendingValidationCount,
   pendingRequestsCount
 }) => {
-  const operationsNav = [
-    { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'requests' as NavTab, label: 'Requests', icon: FileText, badge: pendingRequestsCount },
-    { id: 'fields' as NavTab, label: 'Fields', icon: Map },
-    { id: 'operations' as NavTab, label: 'Operations', icon: Radio },
-    { id: 'validation' as NavTab, label: 'Validation', icon: CheckCircle2, badge: pendingValidationCount }
-  ];
-
-  const insightsNav = [
-    { id: 'reports' as NavTab, label: 'Reports', icon: FileCheck },
-    { id: 'analytics' as NavTab, label: 'Analytics', icon: BarChart3 },
-    { id: 'weather' as NavTab, label: 'Weather', icon: Cloud },
-    { id: 'library' as NavTab, label: 'Library', icon: BookOpen }
-  ];
-
-  const systemNav = [
-    { id: 'activity' as NavTab, label: 'Activity', icon: Activity },
-    { id: 'settings' as NavTab, label: 'Settings', icon: Settings }
+  const missionNav = [
+    { id: 'fields' as NavTab, label: 'Mission Boundary Planner', icon: Map },
+    { id: 'operations' as NavTab, label: 'Drone Scan Operations', icon: Radio },
+    { id: 'requests' as NavTab, label: 'Field Scan Requests', icon: FileText, badge: pendingRequestsCount },
   ];
 
   const renderNavItem = (item: { id: NavTab; label: string; icon: React.ElementType; badge?: number }) => {
@@ -63,29 +40,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '7px 12px',
-          borderRadius: '4px',
+          padding: '9px 12px',
+          borderRadius: '6px',
           fontSize: '13px',
-          fontWeight: isActive ? 600 : 400,
-          color: isActive ? '#20231F' : '#6B7068',
+          fontWeight: isActive ? 700 : 500,
+          color: isActive ? '#30432E' : '#555B52',
           backgroundColor: isActive ? '#EBF0E9' : 'transparent',
           borderLeft: isActive ? '3px solid #4F6848' : '3px solid transparent',
-          marginBottom: '2px',
-          transition: 'all 0.1s ease'
+          marginBottom: '4px',
+          transition: 'all 0.15s ease',
+          cursor: 'pointer'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Icon size={16} strokeWidth={1.75} color={isActive ? '#30432E' : '#6B7068'} />
+          <Icon size={17} strokeWidth={1.8} color={isActive ? '#30432E' : '#6B7068'} />
           <span>{item.label}</span>
         </div>
         {item.badge !== undefined && item.badge > 0 && (
           <span 
             style={{
               fontSize: '10px',
-              fontWeight: 600,
+              fontWeight: 700,
               backgroundColor: isActive ? '#4F6848' : '#DDDED7',
               color: isActive ? '#FFFFFF' : '#20231F',
-              padding: '1px 6px',
+              padding: '2px 7px',
               borderRadius: '10px'
             }}
           >
@@ -99,8 +77,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       style={{
-        width: '230px',
-        minWidth: '230px',
+        width: '240px',
+        minWidth: '240px',
         height: '100%',
         backgroundColor: '#FFFFFF',
         borderRight: '1px solid #DDDED7',
@@ -114,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand Header */}
         <div 
           style={{
-            padding: '16px 16px 14px 16px',
+            padding: '18px 16px 16px 16px',
             borderBottom: '1px solid #EBECE6',
             display: 'flex',
             alignItems: 'center',
@@ -123,49 +101,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div 
             style={{
-              width: '28px',
-              height: '28px',
+              width: '32px',
+              height: '32px',
               backgroundColor: '#30432E',
-              borderRadius: '4px',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFFFFF',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '14px',
+              boxShadow: '0 2px 6px rgba(48,67,46,0.3)'
             }}
           >
             AS
           </div>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#20231F', lineHeight: 1.2 }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#20231F', lineHeight: 1.2 }}>
               AgriSwarm
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7068', letterSpacing: '0.4px', fontWeight: 500 }}>
-              OPERATOR PLATFORM
+            <div style={{ fontSize: '10px', color: '#4F6848', letterSpacing: '0.6px', fontWeight: 700 }}>
+              MISSION PLANNER WEB
             </div>
           </div>
         </div>
 
-        {/* Navigation Sections */}
-        <div style={{ padding: '12px 10px' }}>
-          {/* OPERATIONS */}
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '6px 10px 4px 10px' }}>
-            OPERATIONS
+        {/* Navigation Section */}
+        <div style={{ padding: '16px 12px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '0 10px 8px 10px' }}>
+            PIXHAWK MISSION UPLOADER
           </div>
-          {operationsNav.map(renderNavItem)}
-
-          {/* INSIGHTS */}
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '14px 10px 4px 10px' }}>
-            INSIGHTS
-          </div>
-          {insightsNav.map(renderNavItem)}
-
-          {/* SYSTEM */}
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '14px 10px 4px 10px' }}>
-            SYSTEM
-          </div>
-          {systemNav.map(renderNavItem)}
+          {missionNav.map(renderNavItem)}
         </div>
       </div>
 
@@ -173,11 +139,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div 
         style={{
           borderTop: '1px solid #EBECE6',
-          padding: '12px 14px',
+          padding: '14px',
           backgroundColor: '#FAFBF8'
         }}
       >
-        {/* Operational Badge */}
         <div 
           style={{
             display: 'flex',
@@ -186,21 +151,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             fontSize: '11px',
             color: '#30432E',
             backgroundColor: '#EBF0E9',
-            padding: '6px 10px',
-            borderRadius: '4px',
+            padding: '8px 12px',
+            borderRadius: '6px',
             border: '1px solid rgba(79, 104, 72, 0.2)'
           }}
         >
           <span 
             style={{
-              width: '7px',
-              height: '7px',
+              width: '8px',
+              height: '8px',
               borderRadius: '50%',
               backgroundColor: '#587451'
             }}
           />
-          <span style={{ fontWeight: 600 }}>System Operational</span>
-          <ShieldCheck size={13} style={{ marginLeft: 'auto', color: '#4F6848' }} />
+          <span style={{ fontWeight: 700 }}>Pixhawk Ready</span>
+          <ShieldCheck size={14} style={{ marginLeft: 'auto', color: '#4F6848' }} />
         </div>
       </div>
     </aside>
