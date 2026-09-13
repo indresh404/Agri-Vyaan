@@ -985,11 +985,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDroneProgressLine(bool isCompleted) {
-    return Container(
-      width: 14,
-      height: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      color: isCompleted ? Colors.purple.shade700 : Colors.grey.shade300,
+    return Expanded(
+      child: Container(
+        height: 2,
+        margin: const EdgeInsets.only(bottom: 16),
+        color: isCompleted ? Colors.purple.shade700 : Colors.grey.shade300,
+      ),
     );
   }
 

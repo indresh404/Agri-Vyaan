@@ -729,12 +729,17 @@ class _AreaCalculatorFormState extends State<AreaCalculatorForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: TextFormField(
                     initialValue: _inputValue.toString(),
-                    decoration: const InputDecoration(labelText: 'Enter Area Value', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Enter Area Value',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    ),
                     keyboardType: TextInputType.number,
                     onChanged: (val) {
                       setState(() {
@@ -743,20 +748,33 @@ class _AreaCalculatorFormState extends State<AreaCalculatorForm> {
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: _selectedUnit,
                     items: ['Acres', 'Hectares', 'Gunthas', 'Bighas']
-                        .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                        .map((u) => DropdownMenuItem(
+                              value: u,
+                              child: Text(
+                                u,
+                                style: const TextStyle(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ))
                         .toList(),
                     onChanged: (val) {
-                      setState(() {
-                        _selectedUnit = val!;
-                      });
+                      if (val != null) {
+                        setState(() {
+                          _selectedUnit = val;
+                        });
+                      }
                     },
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                    ),
                   ),
                 ),
               ],
@@ -781,8 +799,18 @@ class _AreaCalculatorFormState extends State<AreaCalculatorForm> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(unit, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo)),
+          Expanded(
+            child: Text(
+              unit,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
         ],
       ),
     );
