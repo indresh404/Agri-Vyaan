@@ -899,51 +899,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   _generateAndDownloadReport(context, field);
                 },
               ),
-              const Divider(height: 24),
-              Builder(
-                builder: (context) {
-                  final isRequested = appState.requestedReportFieldIds.contains(field.id);
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isRequested ? Colors.purple.shade50 : Colors.teal.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isRequested ? Icons.hourglass_empty : Icons.send_and_archive_outlined,
-                        color: isRequested ? Colors.purple.shade800 : Colors.teal.shade800,
-                      ),
-                    ),
-                    title: Text(
-                      isRequested ? 'Pending Request Received' : 'Request Admin for Report',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    subtitle: Text(
-                      isRequested
-                          ? 'Your request has been registered and is pending admin approval'
-                          : 'Submit a new drone audit & report request to the Agrivyaan Hub admins',
-                    ),
-                    trailing: isRequested
-                        ? Icon(Icons.check_circle, color: Colors.purple.shade600, size: 18)
-                        : const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: isRequested
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Request is already pending admin review.')),
-                            );
-                          }
-                        : () {
-                            Navigator.pop(context);
-                            appState.requestReportForField(field.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Report request submitted successfully!')),
-                            );
-                          },
-                  );
-                },
-              ),
             ],
           ),
         );

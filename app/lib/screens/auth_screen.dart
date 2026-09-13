@@ -403,6 +403,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
             decoration: InputDecoration(
               hintText: 'Enter mobile number',
               prefixText: '+91 ',
+              counterText: '',
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -418,10 +419,14 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
               ),
             ),
             keyboardType: TextInputType.phone,
+            maxLength: 10,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Please enter mobile number';
               final cleaned = v.replaceAll(RegExp(r'\D'), '');
-              if (cleaned.length < 10) return 'Enter a valid 10-digit number';
+              if (cleaned.length != 10) return 'Enter a valid 10-digit number';
               return null;
             },
           ),
