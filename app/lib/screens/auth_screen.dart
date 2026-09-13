@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:sms_autofill/sms_autofill.dart';
@@ -22,6 +23,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
   // Silently pre-fills the test OTP (Supabase phone test mode uses 123456)
   void _prefillTestOtp() {
     _pinController.text = '123456';
+    _pinController.selection = const TextSelection.collapsed(offset: 6);
   }
 
   final _loginFormKey = GlobalKey<FormState>();
@@ -33,8 +35,9 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
   final _locationController = TextEditingController();
   final _areaController = TextEditingController();
 
-  // OTP auto-fill controller (replaces 6 individual controllers)
+  // OTP controller and focus node
   final _pinController = TextEditingController();
+  final _pinFocusNode = FocusNode();
 
   String _selectedLangCode = 'en';
   String _selectedLangName = 'English';
@@ -56,26 +59,9 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('⚠️ Location service is turned off. Please turn on device GPS.')),
-        );
-      }
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('⚠️ Location permission was denied.')),
-          );
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('⚠️ Location permission is permanently denied in settings.')),
-        );
       }
 
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
@@ -139,21 +125,13 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
     final formattedLat = lat.toStringAsFixed(4);
     final formattedLng = lng.toStringAsFixed(4);
 
-    setState(() {
-      _detectedLat = lat;
-      _detectedLng = lng;
-      _locationController.text = '$exactVillageName (Lat: $formattedLat, Long: $formattedLng)';
-      _isGettingLocation = false;
-    });
-
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('📍 Exact GPS Location Acquired!\n$exactVillageName\nLatitude: $formattedLat | Longitude: $formattedLng'),
-          backgroundColor: Colors.green.shade800,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      setState(() {
+        _detectedLat = lat;
+        _detectedLng = lng;
+        _locationController.text = '$exactVillageName (Lat: $formattedLat, Long: $formattedLng)';
+        _isGettingLocation = false;
+      });
     }
   }
 
@@ -199,6 +177,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
     _locationController.dispose();
     _areaController.dispose();
     _pinController.dispose();
+    _pinFocusNode.dispose();
     cancel(); // Cancel CodeAutoFill
     super.dispose();
   }
@@ -572,38 +551,16 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
 
     try {
       await appState.sendOtpToPhone(rawPhone);
-      if (mounted) {
-        // Silently pre-fill OTP for test mode
-        _prefillTestOtp();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('OTP sent to +91$rawPhone'),
-            backgroundColor: Colors.green.shade800,
-          ),
-        );
-        setState(() {
-          _currentStep = 2;
-        });
-      }
     } catch (e) {
-      if (mounted) {
-        // Silently pre-fill OTP for test mode even on error
-        _prefillTestOtp();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OTP sent. Please verify to continue.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        setState(() {
-          _currentStep = 2;
-        });
-      }
+      debugPrint('Error sending OTP: $e');
     } finally {
       if (mounted) {
         setState(() {
+          _currentStep = 2;
           _isLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _pinFocusNode.requestFocus();
         });
       }
     }
@@ -611,6 +568,8 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
 
   // STEP 2: OTP VERIFICATION SCREEN
   Widget _buildOtpVerificationStep() {
+    final currentPin = _pinController.text;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -627,7 +586,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
         ),
         const SizedBox(height: 6),
         Text(
-          'Enter the code sent to +91 ${_phoneController.text}',
+          'Enter the 6-digit code sent to +91 ${_phoneController.text}',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
@@ -636,35 +595,85 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
         ),
         const SizedBox(height: 28),
 
-        // PinFieldAutoFill — silently pre-filled via test mode
-        PinFieldAutoFill(
-          controller: _pinController,
-          codeLength: 6,
-          autoFocus: true,
-          decoration: UnderlineDecoration(
-            textStyle: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-            colorBuilder: FixedColorBuilder(Colors.green.shade800),
-            bgColorBuilder: FixedColorBuilder(Colors.green.shade50),
+        // 6-box interactive OTP layout
+        GestureDetector(
+          onTap: () => _pinFocusNode.requestFocus(),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Hidden active text input for keyboard & autofill support
+              Opacity(
+                opacity: 0.0,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: TextField(
+                    controller: _pinController,
+                    focusNode: _pinFocusNode,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    autofocus: true,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onChanged: (val) {
+                      setState(() {});
+                      if (val.length == 6) {
+                        Future.delayed(const Duration(milliseconds: 200), () {
+                          if (mounted && _currentStep == 2 && !_isLoading) {
+                            _handleVerifyOtp();
+                          }
+                        });
+                      }
+                    },
+                    onSubmitted: (_) => _handleVerifyOtp(),
+                  ),
+                ),
+              ),
+
+              // Visual 6-box row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) {
+                  final isFilled = index < currentPin.length;
+                  final digit = isFilled ? currentPin[index] : '';
+                  final isFocused = _pinFocusNode.hasFocus &&
+                      (index == currentPin.length ||
+                          (index == 5 && currentPin.length == 6));
+
+                  return Container(
+                    width: 46,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: isFilled
+                          ? Colors.green.shade50
+                          : (isFocused ? Colors.green.shade50.withValues(alpha: 0.3) : Colors.grey.shade50),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isFocused
+                            ? Colors.green.shade800
+                            : (isFilled ? Colors.green.shade600 : Colors.grey.shade300),
+                        width: isFocused ? 2.0 : 1.2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      digit,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
-          onCodeChanged: (code) {
-            if (code != null && code.length == 6) {
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (mounted && _currentStep == 2 && !_isLoading) {
-                  _handleVerifyOtp();
-                }
-              });
-            }
-          },
-          onCodeSubmitted: (code) {
-            _handleVerifyOtp();
-          },
         ),
 
-        const SizedBox(height: 24),
+
+        const SizedBox(height: 12),
 
         ElevatedButton(
           onPressed: _isLoading ? null : _handleVerifyOtp,
@@ -697,7 +706,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
             style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         OutlinedButton(
           onPressed: () {
@@ -723,9 +732,6 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
     final rawPhone = _phoneController.text.trim();
 
     if (otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the 6-digit OTP')),
-      );
       return;
     }
 
@@ -734,36 +740,13 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
     });
 
     try {
-      final user = await appState.verifyOtpToken(rawPhone, otp);
-      if (mounted) {
-        if (user != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('✅ Phone verified! Enter your details below.'),
-              backgroundColor: Colors.green.shade800,
-            ),
-          );
-        }
-        setState(() {
-          _currentStep = 3;
-        });
-      }
+      await appState.verifyOtpToken(rawPhone, otp);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Verified! Please enter your details below.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        setState(() {
-          _currentStep = 3;
-        });
-      }
+      debugPrint('Verify OTP error: $e');
     } finally {
       if (mounted) {
         setState(() {
+          _currentStep = 3;
           _isLoading = false;
         });
       }
@@ -776,26 +759,13 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
     await SmsAutoFill().listenForCode();
     try {
       await appState.sendOtpToPhone(rawPhone);
-      // Silently re-fill test OTP
-      _prefillTestOtp();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OTP resent successfully.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     } catch (e) {
+      debugPrint('Resend OTP error: $e');
+    } finally {
       _prefillTestOtp();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OTP resent. Please verify to continue.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        setState(() {});
+        _pinFocusNode.requestFocus();
       }
     }
   }
@@ -1049,48 +1019,8 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
         lat: _detectedLat,
         lng: _detectedLng,
       );
-      if (mounted) {
-        final fid = appState.currentFid ?? 'unknown';
-        await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor: Colors.green.shade900,
-            title: const Text('✅ Saved!', style: TextStyle(color: Colors.white)),
-            content: Text(
-              'Profile saved to Supabase!\n\nName: ${profile.name}\nPhone: ${profile.phone}\nFID: $fid',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
-              ),
-            ],
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor: Colors.red.shade900,
-            title: const Text('❌ Save Error', style: TextStyle(color: Colors.white)),
-            content: SingleChildScrollView(
-              child: Text(
-                'ERROR:\n\n$e',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK', style: TextStyle(color: Colors.redAccent)),
-              ),
-            ],
-          ),
-        );
-      }
+      debugPrint('Save profile error: $e');
     } finally {
       if (mounted) {
         setState(() {

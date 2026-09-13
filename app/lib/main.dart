@@ -347,23 +347,6 @@ class _AppShellState extends State<AppShell> {
                   ScansScreen.showRequestScanModal(context, appState);
                 },
               ),
-              const Divider(height: 1),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      color: Colors.blue.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.healing, color: Colors.blue.shade700),
-                ),
-                title: const Text('Record Farm Action',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text(
-                    'Log irrigation, fertilizer, or crop inspections'),
-                onTap: () {
-                  Navigator.pop(context);
-                  FieldsScreen.showGlobalRecordActionModal(context, appState);
-                },
-              ),
             ],
           ),
         );

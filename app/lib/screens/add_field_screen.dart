@@ -143,12 +143,6 @@ class _AddFieldScreenState extends State<AddFieldScreen> {
       _latitudeCtrl.text = lat.toStringAsFixed(4);
       _longitudeCtrl.text = lng.toStringAsFixed(4);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coordinates set for $label ($lat, $lng)'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   @override

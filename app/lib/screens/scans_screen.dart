@@ -412,21 +412,25 @@ class _ScansScreenState extends State<ScansScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        scan.scanType,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                      ),
-                                      Text(
-                                        'Field: ${field.name} (${field.crop})',
-                                        style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          scan.scanType,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Field: ${field.name} (${field.crop})',
+                                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                  const SizedBox(width: 8),
                                   _buildStatusBadge(scan.status),
                                 ],
                               ),
@@ -434,19 +438,32 @@ class _ScansScreenState extends State<ScansScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.person_outline, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text('Pilot: ${scan.operatorName}', style: const TextStyle(fontSize: 11)),
-                                    ],
+                                  Flexible(
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.person_outline, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text('Pilot: ${scan.operatorName}',
+                                              style: const TextStyle(fontSize: 11),
+                                              overflow: TextOverflow.ellipsis),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text('${scan.date} @ ${scan.time}', style: const TextStyle(fontSize: 11)),
-                                    ],
+                                  Flexible(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text('${scan.date} @ ${scan.time}',
+                                              style: const TextStyle(fontSize: 11),
+                                              overflow: TextOverflow.ellipsis),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
