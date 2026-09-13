@@ -905,7 +905,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => ScansScreen.showDroneTimelineDialog(context, activeScan.scanType),
+                        onPressed: () => ScansScreen.showDroneTimelineDialog(context, activeScan),
                         icon: const Icon(Icons.timeline, size: 16),
                         label: const Text('Track Live Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         style: OutlinedButton.styleFrom(

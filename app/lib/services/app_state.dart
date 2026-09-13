@@ -276,27 +276,66 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Step 2: Verify OTP token with Supabase Auth
-  /// Returns user if Supabase Phone Auth is configured, null otherwise.
-  /// Never throws — failure is handled gracefully so onboarding can continue.
-  Future<User?> verifyOtpToken(String phone, String token) async {
+  /// Step 2: Verify OTP token with Supabase Auth & check if farmer already exists.
+  /// Returns true if farmer exists in database (navigates directly to Home page),
+  /// or false if phone number is new (prompts for details).
+  Future<bool> verifyOtpToken(String phone, String token) async {
     final formattedPhone = _formatIndianPhone(phone);
-    debugPrint('Attempting OTP verification for: $formattedPhone');
+    final cleanDigits = phone.replaceAll(RegExp(r'\D'), '');
+    final tenDigits = cleanDigits.length >= 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
+
+    debugPrint('Attempting OTP verification for: $formattedPhone (clean: $tenDigits)');
+    User? authUser;
     try {
       final response = await _supabase.auth.verifyOTP(
         phone: formattedPhone,
         token: token,
         type: OtpType.sms,
       );
-      final user = response.user ?? _supabase.auth.currentUser;
-      if (user != null) {
-        debugPrint('OTP verified via Supabase Auth. User: ${user.id}');
-        await loadUserDataFromSupabase(user.id, phone: user.phone);
-      }
-      return user;
+      authUser = response.user ?? _supabase.auth.currentUser;
     } catch (e) {
-      debugPrint('OTP verification skipped (Phone Auth not configured): $e');
-      return null; // Graceful fallback — caller proceeds to profile setup
+      debugPrint('OTP verification skipped/fallback: $e');
+    }
+
+    // Check if user profile already exists in public.users table by auth_id or phone_no
+    Map<String, dynamic>? profileRes;
+    if (authUser != null) {
+      profileRes = await _supabase
+          .from('users')
+          .select()
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
+    }
+
+    if (profileRes == null && tenDigits.isNotEmpty) {
+      try {
+        final results = await _supabase
+            .from('users')
+            .select()
+            .or('phone_no.eq.$phone,phone_no.eq.$tenDigits,phone_no.eq.+$tenDigits,phone_no.eq.+91$tenDigits')
+            .maybeSingle();
+        if (results != null) {
+          profileRes = results;
+        }
+      } catch (e) {
+        debugPrint('Error searching user by phone in Supabase: $e');
+      }
+    }
+
+    if (profileRes != null) {
+      _currentProfile = FarmerProfile.fromMap(profileRes);
+      _isLoggedIn = true;
+      _needsProfileSetup = false;
+      final fid = _currentProfile?.fid ?? profileRes['fid']?.toString();
+      debugPrint('Existing user found for phone $tenDigits! Logging directly in: ${_currentProfile?.name} (FID: $fid)');
+      if (fid != null && fid.isNotEmpty) {
+        await loadUserDataFromSupabase(fid, phone: phone);
+      }
+      notifyListeners();
+      return true; // Phone number already exists -> directly to Home!
+    } else {
+      debugPrint('New phone number $tenDigits detected -> Prompting for details.');
+      return false; // Phone number is new -> ask for details
     }
   }
 
@@ -478,78 +517,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Create or update farmer profile in Supabase and optionally seed first field.
+  /// Create or update farmer profile in Supabase.
   Future<void> completeOnboarding(
     FarmerProfile profile, {
     double? lat,
     double? lng,
   }) async {
     await saveFarmerProfileToSupabase(profile);
-
-    // Automatically seed user's first field if profile main crop not empty
-    if (profile.mainCrop.isNotEmpty && _fields.isEmpty) {
-      final fieldLat = lat ?? 20.7453;
-      final fieldLng = lng ?? 78.6022;
-      final newCropField = CropField(
-        id: 'field_${DateTime.now().millisecondsSinceEpoch}',
-        name: 'My ${profile.mainCrop} Field',
-        crop: profile.mainCrop,
-        area: profile.farmArea,
-        areaUnit: profile.areaUnit,
-        sowingDate: '2026-08-01',
-        cropStage: 'Germination stage',
-        healthScore: 90,
-        prevHealthScore: 90,
-        lastScanDate: 'None',
-        moistureStatus: 'NORMAL',
-        activeAlerts: [],
-        zones: [
-          Zone(
-            id: 'z1',
-            name: 'Zone 1',
-            status: 'Healthy',
-            moisture: 50.0,
-            temperature: 28.0,
-            risk: 'None',
-            aiExplanation: 'Field conditions are healthy and moisture is optimal.',
-            recommendation: 'Monitor regularly.',
-          ),
-          Zone(
-            id: 'z2',
-            name: 'Zone 2',
-            status: 'Healthy',
-            moisture: 48.0,
-            temperature: 28.0,
-            risk: 'None',
-            aiExplanation: 'Standard development stages.',
-            recommendation: 'Monitor regularly.',
-          ),
-        ],
-        sensors: [
-          SensorReading(
-            sensorName: 'Soil Moisture',
-            currentValue: 49.0,
-            minNormal: 35.0,
-            maxNormal: 65.0,
-            unit: '%',
-            status: 'NORMAL',
-            history: [49.0, 48.0],
-          ),
-          SensorReading(
-            sensorName: 'Temperature',
-            currentValue: 28.0,
-            minNormal: 15.0,
-            maxNormal: 35.0,
-            unit: '°C',
-            status: 'NORMAL',
-            history: [28.0, 28.0],
-          ),
-        ],
-        // Store lat/lng in location string so farmFieldToMap can parse it
-        location: 'Lat: $fieldLat, Long: $fieldLng',
-      );
-      await addField(newCropField);
-    }
     notifyListeners();
   }
 

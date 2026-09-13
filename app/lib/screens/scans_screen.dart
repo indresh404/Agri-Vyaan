@@ -9,11 +9,11 @@ class ScansScreen extends StatefulWidget {
   @override
   State<ScansScreen> createState() => _ScansScreenState();
 
-  static void showDroneTimelineDialog(BuildContext context, String scanType) {
+  static void showDroneTimelineDialog(BuildContext context, DroneScan scan) {
     showDialog(
       context: context,
       builder: (context) {
-        return AnimatedDroneTimelineDialog(scanType: scanType);
+        return AnimatedDroneTimelineDialog(scan: scan);
       },
     );
   }
@@ -174,7 +174,9 @@ class ScansScreen extends StatefulWidget {
                                   );
                                   if (context.mounted) {
                                     Navigator.pop(context);
-                                    ScansScreen.showDroneTimelineDialog(context, selectedScanType);
+                                    if (appState.scans.isNotEmpty) {
+                                      ScansScreen.showDroneTimelineDialog(context, appState.scans.first);
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
@@ -201,8 +203,8 @@ class ScansScreen extends StatefulWidget {
 }
 
 class AnimatedDroneTimelineDialog extends StatefulWidget {
-  final String scanType;
-  const AnimatedDroneTimelineDialog({super.key, required this.scanType});
+  final DroneScan scan;
+  const AnimatedDroneTimelineDialog({super.key, required this.scan});
 
   @override
   State<AnimatedDroneTimelineDialog> createState() => _AnimatedDroneTimelineDialogState();
@@ -229,6 +231,82 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateProvider.of(context);
+    final scan = appState.scans.firstWhere(
+      (s) => s.id == widget.scan.id,
+      orElse: () => widget.scan,
+    );
+
+    final isRequested = scan.status == DroneScanStatus.requested;
+    final isAssignedOrScheduled = scan.status == DroneScanStatus.droneAssigned || scan.status == DroneScanStatus.scheduled;
+    final isInProgress = scan.status == DroneScanStatus.inProgress;
+    final isProcessingOrAnalysis = scan.status == DroneScanStatus.processing || scan.status == DroneScanStatus.aiAnalysis || scan.status == DroneScanStatus.verification;
+    final isReportReady = scan.status == DroneScanStatus.reportReady;
+
+    // Step 1: Request Confirmed
+    const step1Status = 'COMPLETED';
+    const step1Title = 'Request Confirmed';
+    final step1Desc = 'Drone scan request for "${scan.scanType}" received in Agrivyaan cloud.';
+    final step1Color = Colors.green.shade600;
+    final step1Bg = Colors.green.shade50;
+    const step1Icon = Icons.check_circle_rounded;
+
+    // Step 2: Admin Approved (ONLY COMPLETED when admin accepts request!)
+    final bool adminApproved = !isRequested;
+    final step2Status = adminApproved ? 'COMPLETED' : 'AWAITING';
+    final step2Title = adminApproved ? 'Admin Approved' : 'Awaiting Admin Approval';
+    final step2Desc = adminApproved
+        ? 'Drone allocation approved by Wardha Hub Center.\nAssigned Pilot: ${scan.operatorName}.'
+        : 'Request queued at Wardha Hub Center. Pending Admin approval & drone allocation.';
+    final step2Color = adminApproved ? Colors.green.shade600 : Colors.orange.shade700;
+    final step2Bg = adminApproved ? Colors.green.shade50 : Colors.orange.shade50;
+    final step2Icon = adminApproved ? Icons.check_circle_rounded : Icons.hourglass_top_rounded;
+    final step2IsInProgress = isRequested;
+
+    // Step 3: Pilot Dispatched
+    final bool step3Completed = isInProgress || isProcessingOrAnalysis || isReportReady;
+    final bool step3InProgress = isAssignedOrScheduled;
+    final String step3Status = step3Completed ? 'COMPLETED' : (step3InProgress ? 'IN PROGRESS' : 'UPCOMING');
+    const step3Title = 'Pilot Dispatched';
+    final step3Desc = step3Completed
+        ? 'Pilot ${scan.operatorName} arrived at farm location.'
+        : (step3InProgress
+            ? 'Pilot assignment: ${scan.operatorName}.\nETA to farm: 45 mins.'
+            : 'Pilot dispatch pending Admin approval.');
+    final step3Color = step3Completed ? Colors.green.shade600 : (step3InProgress ? Colors.purple.shade700 : Colors.grey.shade400);
+    final step3Bg = step3Completed ? Colors.green.shade50 : (step3InProgress ? Colors.purple.shade50 : Colors.grey.shade100);
+    final step3Icon = step3Completed ? Icons.check_circle_rounded : Icons.flight_rounded;
+
+    // Step 4: Arrive at Farm Location
+    final bool step4Completed = isProcessingOrAnalysis || isReportReady;
+    final bool step4InProgress = isInProgress;
+    final String step4Status = step4Completed ? 'COMPLETED' : (step4InProgress ? 'IN PROGRESS' : 'UPCOMING');
+    const step4Title = 'Arrive & Calibration';
+    final step4Desc = step4Completed
+        ? 'Field boundaries mapped and sensor calibration completed.'
+        : (step4InProgress
+            ? 'Drone calibration and field boundary alignment underway.'
+            : 'Awaiting pilot arrival at farm.');
+    final step4Color = step4Completed ? Colors.green.shade600 : (step4InProgress ? Colors.purple.shade700 : Colors.grey.shade400);
+    final step4Bg = step4Completed ? Colors.green.shade50 : (step4InProgress ? Colors.purple.shade50 : Colors.grey.shade100);
+    final step4Icon = step4Completed ? Icons.check_circle_rounded : Icons.location_on_outlined;
+
+    // Step 5: Flight Execution & AI Scan Report
+    final bool step5Completed = isReportReady;
+    final bool step5InProgress = isInProgress || isProcessingOrAnalysis;
+    final String step5Status = step5Completed ? 'COMPLETED' : (step5InProgress ? 'IN PROGRESS' : 'UPCOMING');
+    final step5Title = step5Completed ? 'Report Ready' : (isProcessingOrAnalysis ? 'AI Processing' : 'Flight Execution & Scan');
+    final step5Desc = step5Completed
+        ? 'Full aerial scan completed and AI report verified. Health Score: ${scan.healthScore}/100.'
+        : (isProcessingOrAnalysis
+            ? 'Autonomous flight complete. AI parsing imagery & calculating vegetation indices.'
+            : (isInProgress
+                ? 'Autonomous multi-spectral crop scan flight in progress.'
+                : 'Autonomous multi-spectral crop scan flight.'));
+    final step5Color = step5Completed ? Colors.green.shade600 : (step5InProgress ? Colors.purple.shade700 : Colors.grey.shade400);
+    final step5Bg = step5Completed ? Colors.green.shade50 : (step5InProgress ? Colors.purple.shade50 : Colors.grey.shade100);
+    final step5Icon = step5Completed ? Icons.verified_rounded : Icons.radar_outlined;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
@@ -321,7 +399,7 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Booking for "${widget.scanType}" confirmed. Track real-time fulfillment progress below:',
+                    'Booking for "${scan.scanType}" confirmed. Track real-time fulfillment progress below:',
                     style: TextStyle(fontSize: 12.5, color: Colors.purple.shade50, height: 1.3),
                   ),
                 ],
@@ -336,54 +414,57 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                   children: [
                     _buildAnimatedStep(
                       stepNum: '1',
-                      title: 'Request Confirmed',
-                      desc: 'Drone scan request received in Agrivyaan cloud.',
-                      status: 'COMPLETED',
-                      icon: Icons.check_circle_rounded,
-                      color: Colors.green.shade600,
-                      bgColor: Colors.green.shade50,
+                      title: step1Title,
+                      desc: step1Desc,
+                      status: step1Status,
+                      icon: step1Icon,
+                      color: step1Color,
+                      bgColor: step1Bg,
                       isLast: false,
                     ),
                     _buildAnimatedStep(
                       stepNum: '2',
-                      title: 'Admin Approved',
-                      desc: 'Drone allocation approved by Wardha Hub Center.',
-                      status: 'COMPLETED',
-                      icon: Icons.check_circle_rounded,
-                      color: Colors.green.shade600,
-                      bgColor: Colors.green.shade50,
+                      title: step2Title,
+                      desc: step2Desc,
+                      status: step2Status,
+                      icon: step2Icon,
+                      color: step2Color,
+                      bgColor: step2Bg,
                       isLast: false,
+                      isInProgress: step2IsInProgress,
                     ),
                     _buildAnimatedStep(
                       stepNum: '3',
-                      title: 'Pilot Dispatched',
-                      desc: 'Pilot assignment: Rajesh Kumar.\nETA to farm: 45 mins.',
-                      status: 'IN PROGRESS',
-                      icon: Icons.flight_rounded,
-                      color: Colors.purple.shade700,
-                      bgColor: Colors.purple.shade50,
+                      title: step3Title,
+                      desc: step3Desc,
+                      status: step3Status,
+                      icon: step3Icon,
+                      color: step3Color,
+                      bgColor: step3Bg,
                       isLast: false,
-                      isInProgress: true,
+                      isInProgress: step3InProgress,
                     ),
                     _buildAnimatedStep(
                       stepNum: '4',
-                      title: 'Arrive at Farm Location',
-                      desc: 'Drone calibration and field boundary alignment.',
-                      status: 'UPCOMING',
-                      icon: Icons.location_on_outlined,
-                      color: Colors.grey.shade400,
-                      bgColor: Colors.grey.shade100,
+                      title: step4Title,
+                      desc: step4Desc,
+                      status: step4Status,
+                      icon: step4Icon,
+                      color: step4Color,
+                      bgColor: step4Bg,
                       isLast: false,
+                      isInProgress: step4InProgress,
                     ),
                     _buildAnimatedStep(
                       stepNum: '5',
-                      title: 'Flight Execution & Scan',
-                      desc: 'Autonomous multi-spectral crop scan flight.',
-                      status: 'UPCOMING',
-                      icon: Icons.radar_outlined,
-                      color: Colors.grey.shade400,
-                      bgColor: Colors.grey.shade100,
+                      title: step5Title,
+                      desc: step5Desc,
+                      status: step5Status,
+                      icon: step5Icon,
+                      color: step5Color,
+                      bgColor: step5Bg,
                       isLast: true,
+                      isInProgress: step5InProgress,
                     ),
                   ],
                 ),
@@ -453,20 +534,20 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.purple.shade100.withValues(alpha: 0.5 + (_pulseController.value * 0.5)),
+                              color: color.withValues(alpha: 0.2 + (_pulseController.value * 0.3)),
                               border: Border.all(
-                                color: Colors.purple.shade600,
+                                color: color,
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.purple.shade300.withValues(alpha: 0.4 * _pulseController.value),
+                                  color: color.withValues(alpha: 0.4 * _pulseController.value),
                                   blurRadius: 10,
                                   spreadRadius: 2,
                                 )
                               ],
                             ),
-                            child: Icon(icon, color: Colors.purple.shade700, size: 20),
+                            child: Icon(icon, color: color, size: 20),
                           );
                         },
                       )
@@ -490,7 +571,7 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                       decoration: BoxDecoration(
                         color: color == Colors.grey.shade400
                             ? Colors.grey.shade200
-                            : (isInProgress ? Colors.purple.shade300 : color.withValues(alpha: 0.5)),
+                            : (isInProgress ? color.withValues(alpha: 0.5) : color.withValues(alpha: 0.5)),
                         borderRadius: BorderRadius.circular(1),
                       ),
                     ),
@@ -506,10 +587,10 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isInProgress ? Colors.purple.shade50.withValues(alpha: 0.5) : Colors.grey.shade50,
+                    color: isInProgress ? color.withValues(alpha: 0.08) : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isInProgress ? Colors.purple.shade200 : Colors.grey.shade200,
+                      color: isInProgress ? color.withValues(alpha: 0.4) : Colors.grey.shade200,
                       width: isInProgress ? 1.5 : 1,
                     ),
                   ),
@@ -534,7 +615,7 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                             decoration: BoxDecoration(
                               color: status == 'COMPLETED'
                                   ? Colors.green.shade100
-                                  : (status == 'IN PROGRESS' ? Colors.purple.shade100 : Colors.grey.shade200),
+                                  : (isInProgress ? color.withValues(alpha: 0.15) : Colors.grey.shade200),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -544,7 +625,7 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                                 fontWeight: FontWeight.bold,
                                 color: status == 'COMPLETED'
                                     ? Colors.green.shade800
-                                    : (status == 'IN PROGRESS' ? Colors.purple.shade900 : Colors.grey.shade700),
+                                    : (isInProgress ? color : Colors.grey.shade700),
                               ),
                             ),
                           ),
@@ -561,8 +642,8 @@ class _AnimatedDroneTimelineDialogState extends State<AnimatedDroneTimelineDialo
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: 0.6,
-                            backgroundColor: Colors.purple.shade100,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.purple.shade600),
+                            backgroundColor: color.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
                             minHeight: 5,
                           ),
                         ),
@@ -720,6 +801,23 @@ class _ScansScreenState extends State<ScansScreen> {
 
                               // Progress indicators line
                               _buildTimelineProgress(scan.status),
+                              const SizedBox(height: 14),
+
+                              // Track Live Status Button for Every Booking Card
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => ScansScreen.showDroneTimelineDialog(context, scan),
+                                  icon: const Icon(Icons.timeline, size: 16),
+                                  label: const Text('Track Live Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.purple.shade800,
+                                    side: BorderSide(color: Colors.purple.shade300),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
 
                               if (scan.status == DroneScanStatus.aiAnalysis && appState.currentRole == 'ADMIN') ...[
                                 const Divider(height: 24),
