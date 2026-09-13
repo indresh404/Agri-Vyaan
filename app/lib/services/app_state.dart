@@ -153,7 +153,16 @@ class AppState extends ChangeNotifier {
           final user = session.user;
           await loadUserDataFromSupabase(user.id, phone: user.phone);
         } else if (event == AuthChangeEvent.signedOut) {
-          await logout();
+          // Do NOT call logout() here — logout() already called signOut(),
+          // which triggered this event. Calling logout() again would loop.
+          // Just clear local state silently.
+          _isLoggedIn = false;
+          _currentProfile = null;
+          _fields = [];
+          _scans = [];
+          _soilHealthCards = {};
+          _initializeData();
+          notifyListeners();
         }
       });
     } catch (e) {

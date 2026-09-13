@@ -8,6 +8,7 @@ import 'weather_screen.dart';
 import 'tools_screen.dart';
 import 'chat_screen.dart';
 import 'library_screen.dart';
+import 'scans_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onTabSelected;
@@ -352,6 +353,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
             ],
 
+            // LIVE DRONE SCAN TRACKING SECTION
+            _buildDroneScanTrackingSection(context, appState),
+            const SizedBox(height: 20),
+
             // FARM TOOLS CALCULATORS SECTION
             const Text(
               'Farm Tools',
@@ -620,6 +625,373 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- WIDGET BUILDERS ---
+
+  Widget _buildDroneScanTrackingSection(BuildContext context, AppState appState) {
+    final scans = appState.scans;
+    if (scans.isEmpty) {
+      // Prompt to Book Drone Scan
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.purple.shade100),
+        ),
+        color: Colors.purple.shade50.withValues(alpha: 0.4),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade700,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.flight_takeoff, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Book Drone Scan',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.purple.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Schedule crop health, NDVI or soil moisture aerial scans for your fields.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => ScansScreen.showRequestScanModal(context, appState),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: const Text('Book Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Active / Latest Drone Scan
+    final activeScan = scans.first;
+
+    Color statusColor;
+    String statusText;
+    int currentProgressIndex = 1; // 1 to 4
+
+    switch (activeScan.status) {
+      case DroneScanStatus.requested:
+        statusColor = Colors.orange.shade800;
+        statusText = 'Request Confirmed';
+        currentProgressIndex = 1;
+        break;
+      case DroneScanStatus.scheduled:
+      case DroneScanStatus.droneAssigned:
+        statusColor = Colors.purple.shade700;
+        statusText = 'Pilot Dispatched';
+        currentProgressIndex = 2;
+        break;
+      case DroneScanStatus.inProgress:
+        statusColor = Colors.blue.shade700;
+        statusText = 'Flight In Progress';
+        currentProgressIndex = 3;
+        break;
+      case DroneScanStatus.processing:
+      case DroneScanStatus.aiAnalysis:
+      case DroneScanStatus.verification:
+        statusColor = Colors.teal.shade700;
+        statusText = 'AI Analyzing Imagery';
+        currentProgressIndex = 3;
+        break;
+      case DroneScanStatus.reportReady:
+        statusColor = Colors.green.shade800;
+        statusText = 'AI Report Ready';
+        currentProgressIndex = 4;
+        break;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.flight_takeoff, color: Colors.purple.shade700, size: 20),
+                const SizedBox(width: 6),
+                const Text(
+                  'Drone Scan Tracking',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            InkWell(
+              onTap: () => widget.onPushScreen(const ScansScreen()),
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Row(
+                  children: [
+                    Text(
+                      'View All (${scans.length})',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade700,
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios, size: 11, color: Colors.purple.shade700),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.purple.shade200, width: 1.2),
+          ),
+          color: Colors.purple.shade50.withValues(alpha: 0.35),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with Scan Type and Status
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.radar, color: Colors.purple.shade800, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activeScan.scanType,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  activeScan.fieldName ?? 'Farm Field',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            statusText,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Scheduled Date & Time
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month, size: 16, color: Colors.purple.shade700),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Scheduled: ${activeScan.date} at ${activeScan.time}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Pilot: ${activeScan.operatorName}',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 4-Step Progress Indicator
+                Row(
+                  children: [
+                    _buildDroneProgressStep('1. Booked', 1 <= currentProgressIndex, 1 == currentProgressIndex),
+                    _buildDroneProgressLine(2 <= currentProgressIndex),
+                    _buildDroneProgressStep('2. Pilot Dispatched', 2 <= currentProgressIndex, 2 == currentProgressIndex),
+                    _buildDroneProgressLine(3 <= currentProgressIndex),
+                    _buildDroneProgressStep('3. Flight Scan', 3 <= currentProgressIndex, 3 == currentProgressIndex),
+                    _buildDroneProgressLine(4 <= currentProgressIndex),
+                    _buildDroneProgressStep('4. Report Ready', 4 <= currentProgressIndex, 4 == currentProgressIndex),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => ScansScreen.showDroneTimelineDialog(context, activeScan.scanType),
+                        icon: const Icon(Icons.timeline, size: 16),
+                        label: const Text('Track Live Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.purple.shade800,
+                          side: BorderSide(color: Colors.purple.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: () => ScansScreen.showRequestScanModal(context, appState),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('New Scan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDroneProgressStep(String label, bool isCompleted, bool isCurrent) {
+    Color circleColor = isCompleted ? Colors.purple.shade700 : Colors.grey.shade300;
+    Color textColor = isCompleted ? Colors.purple.shade900 : Colors.grey.shade500;
+
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: isCompleted ? circleColor : Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: circleColor, width: 2),
+            ),
+            child: Center(
+              child: isCompleted
+                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                  : Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isCurrent ? Colors.purple.shade700 : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+              color: textColor,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDroneProgressLine(bool isCompleted) {
+    return Container(
+      width: 14,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      color: isCompleted ? Colors.purple.shade700 : Colors.grey.shade300,
+    );
+  }
 
   Widget _buildToolQuickCard(
     String label,
