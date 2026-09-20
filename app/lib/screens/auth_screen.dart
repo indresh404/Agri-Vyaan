@@ -259,6 +259,7 @@ class _AuthScreenState extends State<AuthScreen> with CodeAutoFill {
                       _selectedLangCode = lang['code']!;
                       _selectedLangName = lang['name']!;
                     });
+                    appState.setLanguage(lang['code']!);
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(

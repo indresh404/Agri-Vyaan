@@ -400,8 +400,12 @@ class ProfileScreen extends StatelessWidget {
                 value: appState.currentLanguage,
                 items: const [
                   DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'hi', child: Text('हिंदी')),
-                  DropdownMenuItem(value: 'mr', child: Text('मराठी')),
+                  DropdownMenuItem(value: 'hi', child: Text('हिंदी (Hindi)')),
+                  DropdownMenuItem(value: 'mr', child: Text('मराठी (Marathi)')),
+                  DropdownMenuItem(value: 'gu', child: Text('ગુજરાતી (Gujarati)')),
+                  DropdownMenuItem(value: 'pa', child: Text('ਪੰਜਾਬੀ (Punjabi)')),
+                  DropdownMenuItem(value: 'kn', child: Text('ಕನ್ನಡ (Kannada)')),
+                  DropdownMenuItem(value: 'te', child: Text('తెలుగు (Telugu)')),
                 ],
                 onChanged: (lang) {
                   if (lang != null) appState.setLanguage(lang);

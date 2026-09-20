@@ -150,33 +150,33 @@ class _AppShellState extends State<AppShell> {
                     ],
                   ),
                 ),
-                destinations: const [
+                destinations: [
                   NavigationRailDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home),
-                    label: Text('Home'),
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: const Icon(Icons.home),
+                    label: Text(appState.translate('home')),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.landscape_outlined),
-                    selectedIcon: Icon(Icons.landscape),
-                    label: Text('Fields'),
+                    icon: const Icon(Icons.landscape_outlined),
+                    selectedIcon: const Icon(Icons.landscape),
+                    label: Text(appState.translate('fields')),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.add_circle_outline,
+                    icon: const Icon(Icons.add_circle_outline,
                         color: AppTheme.primaryGreen),
                     selectedIcon:
-                        Icon(Icons.add_circle, color: AppTheme.primaryGreen),
-                    label: Text('Quick Add'),
+                        const Icon(Icons.add_circle, color: AppTheme.primaryGreen),
+                    label: Text(appState.translate('add_field')),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.assessment_outlined),
-                    selectedIcon: Icon(Icons.assessment),
-                    label: Text('Reports'),
+                    icon: const Icon(Icons.assessment_outlined),
+                    selectedIcon: const Icon(Icons.assessment),
+                    label: Text(appState.translate('reports')),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: Text('Profile'),
+                    icon: const Icon(Icons.person_outline),
+                    selectedIcon: const Icon(Icons.person),
+                    label: Text(appState.translate('profile')),
                   ),
                 ],
               ),
@@ -210,9 +210,9 @@ class _AppShellState extends State<AppShell> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildBottomNavItem(context, appState, 0,
-                          Icons.home_outlined, Icons.home, 'Home'),
+                          Icons.home_outlined, Icons.home, appState.translate('home')),
                       _buildBottomNavItem(context, appState, 1,
-                          Icons.landscape_outlined, Icons.landscape, 'Fields'),
+                          Icons.landscape_outlined, Icons.landscape, appState.translate('fields')),
                       _buildBottomNavItem(
                           context,
                           appState,
@@ -227,9 +227,9 @@ class _AppShellState extends State<AppShell> {
                           3,
                           Icons.assessment_outlined,
                           Icons.assessment,
-                          'Reports'),
+                          appState.translate('reports')),
                       _buildBottomNavItem(context, appState, 4,
-                          Icons.person_outline, Icons.person, 'Profile'),
+                          Icons.person_outline, Icons.person, appState.translate('profile')),
                     ],
                   ),
                 ),
@@ -307,9 +307,9 @@ class _AppShellState extends State<AppShell> {
                     borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Agrivyaan Quick Actions',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              Text(
+                appState.translate('add_field'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 20),
               ListTile(
