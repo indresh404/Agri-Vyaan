@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,16 +79,66 @@ class AppState extends ChangeNotifier {
   final SoilHealthCardStorageService _shcStorageService = SoilHealthCardStorageService();
   final BookingService _bookingService = BookingService();
 
+  // Persistent Chat History
+  List<Map<String, dynamic>> _chatHistory = [];
+  List<Map<String, dynamic>> get chatHistory => _chatHistory;
+
   AppState() {
     _initializeData();
     _checkExistingSession();
     _listenToAuthState();
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString('sarvam_chat_history');
+      if (jsonString != null && jsonString.isNotEmpty) {
+        final List decoded = jsonDecode(jsonString);
+        _chatHistory = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading chat history: $e');
+    }
+  }
+
+  Future<void> addChatMessage(Map<String, dynamic> message) async {
+    _chatHistory.add(message);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = jsonEncode(_chatHistory);
+      await prefs.setString('sarvam_chat_history', jsonString);
+    } catch (e) {
+      debugPrint('Error saving chat history: $e');
+    }
+  }
+
+  Future<void> clearChatHistory() async {
+    _chatHistory.clear();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('sarvam_chat_history');
+    } catch (e) {
+      debugPrint('Error clearing chat history: $e');
+    }
   }
 
   // --- Session & Supabase Auth Sync ---
 
   Future<void> _checkExistingSession() async {
     try {
+      // ALWAYS load saved language preference first, regardless of auth method
+      final prefs = await SharedPreferences.getInstance();
+      final savedLang = prefs.getString('app_preferred_language');
+      if (savedLang != null && savedLang.isNotEmpty) {
+        _currentLanguage = savedLang;
+        debugPrint('Restored language preference: $savedLang');
+      }
+
       final session = _supabase.auth.currentSession;
       final user = _supabase.auth.currentUser;
 
@@ -98,7 +149,6 @@ class AppState extends ChangeNotifier {
       }
 
       // Restore session from local SharedPreferences if user logged in by phone
-      final prefs = await SharedPreferences.getInstance();
       final savedFid = prefs.getString('saved_farmer_fid');
       final savedPhone = prefs.getString('saved_farmer_phone');
 
@@ -491,9 +541,15 @@ class AppState extends ChangeNotifier {
     return AppLocalizations.translate(key, _currentLanguage);
   }
 
-  void setLanguage(String langCode) {
+  void setLanguage(String langCode) async {
     _currentLanguage = langCode;
     notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_preferred_language', langCode);
+    } catch (e) {
+      debugPrint('Error saving language preference: $e');
+    }
   }
 
   void setRole(String role) {

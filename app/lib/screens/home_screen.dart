@@ -9,6 +9,7 @@ import 'tools_screen.dart';
 import 'chat_screen.dart';
 import 'library_screen.dart';
 import 'scans_screen.dart';
+import '../widgets/home_ai_chatbot.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onTabSelected;
@@ -179,6 +180,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
               ],
             ),
+            const SizedBox(height: 12),
+
+            // SARVAM AI FARMER ASSISTANT CHATBOT (MULTILINGUAL + STT/TTS)
+            const HomeAiChatbot(),
+
             const SizedBox(height: 16),
 
             // DYNAMIC WEATHER & SPRAYING CONDITIONS HEADER (LEFT: Date/Temp, RIGHT: Spray Condition)
@@ -358,9 +364,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // FARM TOOLS CALCULATORS SECTION
-            const Text(
-              'Farm Tools',
-              style: TextStyle(
+            Text(
+              appState.translate('farm_tools'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: Colors.black87,
@@ -371,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Expanded(
                   child: _buildToolQuickCard(
-                    'Fertilizer Calculator',
+                    appState.translate('fertilizer_calc'),
                     Icons.opacity,
                     Colors.green.shade700,
                     () => widget.onPushScreen(
@@ -382,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildToolQuickCard(
-                    'Pesticide Calculator',
+                    appState.translate('pesticide_calc'),
                     Icons.pest_control,
                     Colors.orange.shade800,
                     () => widget.onPushScreen(
@@ -393,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildToolQuickCard(
-                    'Farming Calculator',
+                    appState.translate('cost_calc'),
                     Icons.payments,
                     Colors.teal.shade700,
                     () => widget.onPushScreen(
@@ -418,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      appState.translate("my_farm").toUpperCase(),
+                      appState.translate('my_farm').toUpperCase(),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade600,
@@ -479,9 +485,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // --- CROP LIBRARY CARD BUTTON ---
-            const Text(
-              'Crops Library',
-              style: TextStyle(
+            Text(
+              appState.translate('crop_library'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: Colors.black87,
@@ -543,9 +549,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             // --- PESTS & DISEASES LIBRARY CARD BUTTON ---
-            const Text(
-              'Pests & Diseases Library',
-              style: TextStyle(
+            Text(
+              appState.translate('pest_library'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: Colors.black87,
@@ -1265,13 +1271,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           size: 16,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Home',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.green.shade800,
-                          ),
+                        Builder(
+                          builder: (ctx) {
+                            final appState2 = AppStateProvider.of(ctx);
+                            return Text(
+                              appState2.translate('home'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: Colors.green.shade800,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
