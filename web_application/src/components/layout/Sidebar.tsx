@@ -4,7 +4,8 @@ import {
   Map, 
   Radio, 
   FileText, 
-  ShieldCheck
+  ShieldCheck,
+  Info
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -12,12 +13,14 @@ interface SidebarProps {
   onNavigate: (tab: NavTab) => void;
   pendingValidationCount: number;
   pendingRequestsCount: number;
+  onNavigatePath?: (path: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onNavigate,
-  pendingRequestsCount
+  pendingRequestsCount,
+  onNavigatePath
 }) => {
   const missionNav = [
     { id: 'fields' as NavTab, label: 'Mission Boundary Planner', icon: Map },
@@ -132,6 +135,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
             PIXHAWK MISSION UPLOADER
           </div>
           {missionNav.map(renderNavItem)}
+
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '16px 10px 8px 10px' }}>
+            ABOUT
+          </div>
+          <button
+            onClick={() => {
+              if (onNavigatePath) {
+                onNavigatePath('/about');
+              } else {
+                window.location.assign('/about');
+              }
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '9px 12px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: '#555B52',
+              backgroundColor: 'transparent',
+              borderLeft: '3px solid transparent',
+              marginBottom: '4px',
+              transition: 'all 0.15s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#EBF0E9';
+              e.currentTarget.style.color = '#30432E';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#555B52';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Info size={17} strokeWidth={1.8} color="#6B7068" />
+              <span>About AgriVyaan</span>
+            </div>
+          </button>
         </div>
       </div>
 
