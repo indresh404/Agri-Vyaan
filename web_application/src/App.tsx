@@ -43,6 +43,7 @@ import { ActivityView } from './components/views/ActivityView';
 import { SettingsView } from './components/views/SettingsView';
 import { WeatherView } from './components/views/WeatherView';
 import { LibraryView } from './components/views/LibraryView';
+import { AboutPage } from './components/views/AboutPage';
 
 const LOCAL_STORAGE_FIELDS_KEY = 'agriswarm_custom_fields';
 
@@ -64,8 +65,29 @@ function loadInitialFields(): FieldAsset[] {
 }
 
 export function App() {
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname || '/';
+    }
+    return '/';
+  });
   const [activeTab, setActiveTab] = useState<NavTab>('requests');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname || '/');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleNavigatePath = (path: string) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', path);
+    }
+    setCurrentPath(path);
+  };
 
   // State management for operational items
   const [requests, setRequests] = useState<FarmerRequest[]>(MOCK_REQUESTS);
@@ -353,6 +375,10 @@ export function App() {
   const pendingValidationsCount = findings.filter(f => f.status === 'Pending Validation').length;
   const pendingRequestsCount = requests.filter(r => r.status === 'Pending').length;
 
+  if (currentPath === '/about' || currentPath === '/about/') {
+    return <AboutPage onBackToDashboard={() => handleNavigatePath('/')} />;
+  }
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#F6F6F2' }}>
       {/* Persistent Left Sidebar */}
@@ -361,6 +387,7 @@ export function App() {
         onNavigate={(tab) => setActiveTab(tab)}
         pendingValidationCount={pendingValidationsCount}
         pendingRequestsCount={pendingRequestsCount}
+        onNavigatePath={handleNavigatePath}
       />
 
       {/* Main Workspace Area */}
