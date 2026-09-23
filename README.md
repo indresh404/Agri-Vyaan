@@ -67,22 +67,6 @@ Every finding the farmer sees is explainable, confidence-labeled, and grounded i
 
 ---
 
-## 🌍 SDG Alignment
-
-<p align="center">
-  <img src="web_application/public/assets/about/sdg2.jpeg" alt="SDG 2 - Zero Hunger" width="18%" />
-  <img src="web_application/public/assets/about/sdg1.jpeg" alt="SDG 1 - No Poverty" width="18%" />
-  <img src="web_application/public/assets/about/sdg9.jpeg" alt="SDG 9 - Industry, Innovation & Infrastructure" width="18%" />
-  <img src="web_application/public/assets/about/sdg12.jpeg" alt="SDG 12 - Responsible Consumption & Production" width="18%" />
-  <img src="web_application/public/assets/about/sdg13.jpeg" alt="SDG 13 - Climate Action" width="18%" />
-</p>
-
-<p align="center">
-<b>SDG 1</b> No Poverty &nbsp;|&nbsp; <b>SDG 2</b> Zero Hunger &nbsp;|&nbsp; <b>SDG 9</b> Industry & Innovation &nbsp;|&nbsp; <b>SDG 12</b> Responsible Consumption &nbsp;|&nbsp; <b>SDG 13</b> Climate Action
-</p>
-
----
-
 ## 🛸 The Drone
 
 <p align="center">
@@ -181,6 +165,22 @@ The farmer receives an easy-to-understand, voice-explained report, takes recomme
 **Shared Infrastructure**
 - REST APIs for Operator ↔ Farmer sync
 - Offline-first local storage with conflict-safe synchronization
+
+---
+
+## 🌍 SDG Alignment
+
+<p align="center">
+  <img src="web_application/public/assets/about/sdg2.jpeg" alt="SDG 2 - Zero Hunger" width="18%" />
+  <img src="web_application/public/assets/about/sdg1.jpeg" alt="SDG 1 - No Poverty" width="18%" />
+  <img src="web_application/public/assets/about/sdg9.jpeg" alt="SDG 9 - Industry, Innovation & Infrastructure" width="18%" />
+  <img src="web_application/public/assets/about/sdg12.jpeg" alt="SDG 12 - Responsible Consumption & Production" width="18%" />
+  <img src="web_application/public/assets/about/sdg13.jpeg" alt="SDG 13 - Climate Action" width="18%" />
+</p>
+
+<p align="center">
+<b>SDG 1</b> No Poverty &nbsp;|&nbsp; <b>SDG 2</b> Zero Hunger &nbsp;|&nbsp; <b>SDG 9</b> Industry & Innovation &nbsp;|&nbsp; <b>SDG 12</b> Responsible Consumption &nbsp;|&nbsp; <b>SDG 13</b> Climate Action
+</p>
 
 ---
 
