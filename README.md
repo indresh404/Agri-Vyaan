@@ -6,9 +6,7 @@
 <h3 align="center">Smart Farming Assistant — Autonomous Drone Crop Inspection System</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/SIH-2026-orange?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Problem%20Statement-SIH26180-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Theme-Agriculture%20%26%20FoodTech-green?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Theme-Agriculture-green?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Status-Prototype-yellow?style=for-the-badge" />
 </p>
 
